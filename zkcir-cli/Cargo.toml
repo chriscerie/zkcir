@@ -13,3 +13,4 @@ indicatif = "0.17.7"
 tempfile = "3.8.1"
 toml = "0.8.6"
 walkdir = "2.4.0"
+zkcir = { version = "0.1.0", path = "../zkcir" }

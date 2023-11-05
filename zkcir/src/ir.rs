@@ -1,6 +1,9 @@
 use serde::Serialize;
 use serde_json;
 
+use crate::END_DISCRIMINATOR;
+use crate::START_DISCRIMINATOR;
+
 #[derive(Serialize)]
 struct Config {
     num_wires: Option<u64>,
@@ -30,10 +33,9 @@ impl CirBuilder {
     /// Appends discriminator to the start and end so zkcir's CLI can parse the output. You likely want `to_string`
     /// instead.
     pub fn to_cli_string(self) -> Result<String, &'static str> {
-        let json_string = serde_json::to_string(&self).map_err(|_| "Failed serializing to json")?;
         Ok(format!(
-            "<ZKCIR_JSON_START>{}\n<ZKCIR_JSON_END>",
-            json_string
+            "{START_DISCRIMINATOR}{}\n{END_DISCRIMINATOR}",
+            self.to_string()?
         ))
     }
 }

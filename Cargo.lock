@@ -670,4 +670,5 @@ dependencies = [
  "tempfile",
  "toml",
  "walkdir",
+ "zkcir",
 ]

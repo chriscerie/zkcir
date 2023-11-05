@@ -9,13 +9,11 @@ use std::{
 };
 use tempfile::tempdir;
 use walkdir::{DirEntry, WalkDir};
+use zkcir::{END_DISCRIMINATOR, START_DISCRIMINATOR};
 
 use args::get_args;
 
 mod args;
-
-const START_DISCRIMINATOR: &str = "<ZKCIR_JSON_START>";
-const END_DISCRIMINATOR: &str = "<ZKCIR_JSON_END>";
 
 #[derive(Debug)]
 enum TargetFramework {
