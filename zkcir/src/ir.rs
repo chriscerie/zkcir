@@ -4,12 +4,12 @@ use serde_json;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy, Debug)]
 struct Config {
     num_wires: Option<u64>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Copy, Debug)]
 pub struct CirBuilder {
     config: Config,
 }
