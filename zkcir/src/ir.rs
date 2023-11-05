@@ -26,13 +26,13 @@ impl CirBuilder {
         self
     }
 
-    pub fn to_string(self) -> Result<String, &'static str> {
+    pub fn to_string(&self) -> Result<String, &'static str> {
         serde_json::to_string_pretty(&self).map_err(|_| "Failed serializing to json")
     }
 
     /// Appends discriminator to the start and end so zkcir's CLI can parse the output. You likely want `to_string`
     /// instead.
-    pub fn to_cli_string(self) -> Result<String, &'static str> {
+    pub fn to_cli_string(&self) -> Result<String, &'static str> {
         Ok(format!(
             "{START_DISCRIMINATOR}{}\n{END_DISCRIMINATOR}",
             self.to_string()?
