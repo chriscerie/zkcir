@@ -22,6 +22,6 @@ pub fn test_ir_string(test_name: &str, cir: String) {
         let mut output_file = fs::File::create(test_path).expect("couldn't create output file");
         output_file
             .write_all(cir.as_bytes())
-            .expect("couldn't write fixed.diff to output file.");
+            .expect("couldn't write to output file.");
     }
 }
