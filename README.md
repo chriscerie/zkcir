@@ -10,6 +10,6 @@ Zero knowledge circuits IR.
 # CLI Usage
 
 * Clone repo
-* Run `cargo install --path .`
+* Run `cargo install --path zkcir-cli`
 * Clone https://github.com/chriscerie/plonky2-example
 * Run `zkcir --example square_root`
