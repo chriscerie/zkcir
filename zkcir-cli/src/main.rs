@@ -14,6 +14,9 @@ use args::get_args;
 
 mod args;
 
+const START_DISCRIMINATOR: &str = "<ZKCIR_JSON_START>";
+const END_DISCRIMINATOR: &str = "<ZKCIR_JSON_END>";
+
 #[derive(Debug)]
 enum TargetFramework {
     Plonky2,
@@ -146,37 +149,55 @@ fn main() {
 
     target_framework.replace_deps(temp_dir.path(), &pb);
 
+    let mut output = None;
+
     if let Some(example) = args.example {
         pb.inc_length(1);
 
         pb.set_message(": run".to_string());
-        let output = Command::new("cargo")
-            .arg("run")
-            .args(["--example", &example])
-            .current_dir(temp_dir.path())
-            .output()
-            .expect("Failed to execute `cargo run`");
+        output = Some(
+            Command::new("cargo")
+                .arg("run")
+                .args(["--example", &example])
+                .current_dir(temp_dir.path())
+                .output()
+                .expect("Failed to execute `cargo run`"),
+        );
 
         pb.println(format!(
-            "{} cargo run",
+            "{} cargo run with `{example}",
             get_formatted_left_output_green("Finished")
         ));
         pb.inc(1);
+    }
 
-        if output.status.success() {
-            pb.set_style(
-                ProgressStyle::default_bar()
-                    .template(&format!("{{msg}} ir with `{example}`"))
-                    .unwrap(),
-            );
-            pb.finish_with_message(get_formatted_left_output_green("Emitted"));
-            println!("{}", String::from_utf8_lossy(&output.stdout));
-        } else {
-            println!(
+    if let Some(output) = output {
+        if !output.status.success() {
+            panic!(
                 "cargo run failed: {}",
                 String::from_utf8_lossy(&output.stderr)
             );
         }
+
+        pb.set_style(ProgressStyle::default_bar().template("{msg} ir").unwrap());
+        pb.finish_with_message(get_formatted_left_output_green("Emitted"));
+        let output_str =
+            String::from_utf8(output.stdout).expect("Failed to convert output to string");
+
+        let start_byte = output_str
+            .find(START_DISCRIMINATOR)
+            .expect("Start discriminator not found")
+            + START_DISCRIMINATOR.len();
+
+        let end_byte = output_str
+            .find(END_DISCRIMINATOR)
+            .expect("End discriminator not found");
+
+        let json_string = &output_str[start_byte..end_byte].trim();
+
+        println!("{}", json_string);
+    } else {
+        println!("Could not find circuit to run");
     }
 }
 
