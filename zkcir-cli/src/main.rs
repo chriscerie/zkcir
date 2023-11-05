@@ -84,17 +84,16 @@ fn main() {
     ));
 
     pb.set_message(": target framework");
-    let target_framework;
-    if dependencies.get("plonky2").is_some() {
-        target_framework = TargetFramework::Plonky2;
+    let target_framework = if dependencies.get("plonky2").is_some() {
+        TargetFramework::Plonky2
     } else {
         panic!("No supported target framework found");
-    }
+    };
 
     pb.println(format!(
         "{} target framework ({})",
         get_formatted_left_output_green("Found"),
-        target_framework.to_string()
+        target_framework
     ));
     pb.inc(1);
 
@@ -145,12 +144,12 @@ fn main() {
         pb.inc(1);
     }
 
-    target_framework.replace_deps(&temp_dir.path(), &pb);
+    target_framework.replace_deps(temp_dir.path(), &pb);
 
     if let Some(example) = args.example {
         pb.inc_length(1);
 
-        pb.set_message(format!(": run"));
+        pb.set_message(": run".to_string());
         let output = Command::new("cargo")
             .arg("run")
             .args(["--example", &example])
