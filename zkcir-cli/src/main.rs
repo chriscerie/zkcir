@@ -2,16 +2,16 @@ use core::fmt;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     env::{self},
-    fs::{self},
-    io,
+    fs::{self, File},
+    io::{self, Write},
     path::Path,
-    process::Command,
+    process::{self, Command},
 };
 use tempfile::tempdir;
 use walkdir::{DirEntry, WalkDir};
 use zkcir::{END_DISCRIMINATOR, START_DISCRIMINATOR};
 
-use args::get_args;
+use args::{get_args, Args};
 
 mod args;
 
@@ -29,7 +29,7 @@ impl fmt::Display for TargetFramework {
 }
 
 impl TargetFramework {
-    pub fn replace_deps(&self, path: &Path, pb: &ProgressBar) {
+    pub fn replace_deps(&self, path: &Path, pb: &ProgressBar) -> Result<(), String> {
         match self {
             TargetFramework::Plonky2 => {
                 let git_url = "https://github.com/chriscerie/plonky2.git".to_string();
@@ -51,36 +51,32 @@ impl TargetFramework {
                         .args(["--git", &git_url])
                         .current_dir(path)
                         .output()
-                        .expect("Failed to execute `cargo add`");
+                        .map_err(|e| format!("Failed to execute `cargo add`: {}", e))?;
 
                     pb.println(format!(
                         "{} dependency ({package})",
-                        get_formatted_left_output_green("Replaced")
+                        get_formatted_left_output("Replaced", OutputColor::Green)
                     ));
                     pb.inc(1);
                 }
+
+                Ok(())
             }
         }
     }
 }
 
-fn main() {
-    let current_dir = env::current_dir().expect("Failed to get current directory");
-
-    let args = get_args();
-
-    let pb = get_new_pb(3_u64, "Running");
-
+fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String> {
     pb.set_message(": cargo");
-    let parsed_cargo = get_parsed_cargo();
+    let parsed_cargo = get_parsed_cargo()?;
 
     let dependencies = parsed_cargo
         .get("dependencies")
-        .expect("No dependencies found in `Cargo.toml`");
+        .ok_or("No dependencies found in `Cargo.toml`")?;
 
     pb.println(format!(
         "{} {}",
-        get_formatted_left_output_green("Found"),
+        get_formatted_left_output("Found", OutputColor::Green),
         current_dir.join("Cargo.toml").display()
     ));
 
@@ -93,28 +89,28 @@ fn main() {
 
     pb.println(format!(
         "{} target framework ({})",
-        get_formatted_left_output_green("Found"),
+        get_formatted_left_output("Found", OutputColor::Green),
         target_framework
     ));
     pb.inc(1);
 
     pb.set_message(": temp dir");
-    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_dir = tempdir().map_err(|e| format!("Failed to create temp dir: {}", e))?;
 
     pb.println(format!(
-        "{} temp ({})",
-        get_formatted_left_output_green("Created"),
+        "{} {}",
+        get_formatted_left_output("Created", OutputColor::Green),
         temp_dir.path().display()
     ));
     pb.inc(1);
 
     pb.set_message(": copy contents");
-    let num_copied_files =
-        copy_to(&current_dir, temp_dir.path()).expect("Failed to copy contents to temp dir");
+    let num_copied_files = copy_to(current_dir, temp_dir.path())
+        .map_err(|e| format!("Failed to copy contents to temp dir: {}", e))?;
 
     pb.println(format!(
         "{} contents to temp ({num_copied_files} files)",
-        get_formatted_left_output_green("Copied")
+        get_formatted_left_output("Copied", OutputColor::Green)
     ));
     pb.inc(1);
 
@@ -124,33 +120,37 @@ fn main() {
         pb.inc_length(1);
         pb.set_message(": add [workspace]");
 
-        let mut toml_string =
-            toml::to_string(&parsed_cargo).expect("Failed to serialize `Cargo.toml`");
+        let mut toml_string = toml::to_string(&parsed_cargo)
+            .map_err(|e| format!("Failed to serialize `Cargo.toml`: {}", e))?;
 
         let prepend_chars = "[workspace]\n";
         toml_string.insert_str(0, prepend_chars);
 
         fs::write(temp_dir.path().join("Cargo.toml"), toml_string)
-            .expect("Failed to add `[workspace]` to `Cargo.toml");
+            .map_err(|e| format!("Failed to add `[workspace]` to `Cargo.toml: {}", e))?;
 
         pb.println(format!(
             "{} empty `[workspace]` ({})",
-            get_formatted_left_output_green("Added"),
+            get_formatted_left_output("Added", OutputColor::Green),
             temp_dir
                 .path()
                 .join("Cargo.toml")
                 .to_str()
-                .expect("Failed to get `Cargo.toml`")
+                .ok_or("Failed to get `Cargo.toml`")?
         ));
         pb.inc(1);
     }
 
-    target_framework.replace_deps(temp_dir.path(), &pb);
+    target_framework.replace_deps(temp_dir.path(), pb)?;
 
     let mut output = None;
 
-    if let Some(example) = args.example {
+    let mut circuit_name: String = "circuit".to_string();
+
+    if let Some(example) = &args.example {
         pb.inc_length(1);
+
+        circuit_name = example.clone();
 
         pb.set_message(": run".to_string());
         output = Some(
@@ -159,17 +159,19 @@ fn main() {
                 .args(["--example", &example])
                 .current_dir(temp_dir.path())
                 .output()
-                .expect("Failed to execute `cargo run`"),
+                .map_err(|e| format!("Failed to execute `cargo run`: {}", e))?,
         );
 
         pb.println(format!(
-            "{} cargo run with `{example}",
-            get_formatted_left_output_green("Finished")
+            "{} cargo run with `{example}`",
+            get_formatted_left_output("Finished", OutputColor::Green)
         ));
         pb.inc(1);
     }
 
     if let Some(output) = output {
+        pb.inc_length(1);
+
         if !output.status.success() {
             panic!(
                 "cargo run failed: {}",
@@ -177,35 +179,101 @@ fn main() {
             );
         }
 
-        pb.set_style(ProgressStyle::default_bar().template("{msg} ir").unwrap());
-        pb.finish_with_message(get_formatted_left_output_green("Emitted"));
-        let output_str =
-            String::from_utf8(output.stdout).expect("Failed to convert output to string");
+        pb.set_message(": cir".to_string());
+
+        let output_str = String::from_utf8(output.stdout)
+            .map_err(|e| format!("Failed to convert output to string: {}", e))?;
 
         let start_byte = output_str
             .find(START_DISCRIMINATOR)
-            .expect("Start discriminator not found")
+            .ok_or("Start discriminator of output not found")?
             + START_DISCRIMINATOR.len();
 
         let end_byte = output_str
             .find(END_DISCRIMINATOR)
-            .expect("End discriminator not found");
+            .ok_or("End discriminator of output not found")?;
 
         let json_string = &output_str[start_byte..end_byte].trim();
 
-        println!("{}", json_string);
+        pb.println(format!(
+            "{} cir output",
+            get_formatted_left_output("Parsed", OutputColor::Green)
+        ));
+        pb.inc(1);
+
+        pb.set_message(": emit".to_string());
+
+        let output_dir_path = current_dir.join("zkcir_out");
+        let output_cir_path = output_dir_path.join(circuit_name);
+
+        fs::create_dir_all(&output_dir_path)
+            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+
+        if output_cir_path.exists() {
+            if !args.allow_dirty {
+                pb.abandon();
+                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path.display()));
+            }
+
+            fs::remove_file(&output_cir_path)
+                .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+        }
+
+        let mut file = File::options()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&output_cir_path)
+            .map_err(|e| format!("Failed to create output file: {}", e))?;
+
+        file.write_all(
+            json_string
+                // Escape sequences are parsed as actual string data
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .as_bytes(),
+        )
+        .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
+
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template(&format!("{{msg}} {}", output_cir_path.display()))
+                .unwrap(),
+        );
+        pb.finish_with_message(get_formatted_left_output("Emitted", OutputColor::Green));
     } else {
-        println!("Could not find circuit to run");
+        return Err("Could not find circuit to run".to_string());
     }
+
+    Ok(())
 }
 
-fn get_parsed_cargo() -> toml::Value {
-    let contents = fs::read_to_string("Cargo.toml").expect("Could not find `Cargo.toml`");
+fn main() {
+    let current_dir = env::current_dir().expect("Failed to get current directory");
 
-    contents
+    let pb = &get_new_pb(4_u64, "Running");
+
+    let _ = start(&current_dir, &get_args(), pb).map_err(|e| {
+        pb.abandon();
+
+        eprintln!(
+            "{} {}",
+            get_formatted_left_output("Error", OutputColor::Red),
+            e
+        );
+
+        process::exit(1);
+    });
+}
+
+fn get_parsed_cargo() -> Result<toml::Value, String> {
+    let contents =
+        fs::read_to_string("Cargo.toml").map_err(|_| "Failed to find required `Cargo.toml`")?;
+
+    Ok(contents
         .parse::<toml::Value>()
-        .expect("Failed to parse `Cargo.toml`")
-        .to_owned()
+        .map_err(|e| format!("Failed to parse `Cargo.toml`: {}", e))?
+        .to_owned())
 }
 
 fn copy_to(from: &Path, to: &Path) -> io::Result<u64> {
@@ -235,18 +303,24 @@ fn should_copy(entry: &DirEntry) -> bool {
     !entry.path().to_string_lossy().contains("target")
 }
 
-fn get_formatted_left_output_green(output: &str) -> String {
-    let green_bold = "\x1b[1;32m";
-    let reset = "\x1b[0m";
-
-    format!("{green_bold}{:>12}{reset}", output)
+enum OutputColor {
+    Green,
+    Blue,
+    Red,
 }
 
-fn get_formatted_left_output_blue(output: &str) -> String {
-    let blue_bold = "\x1b[1;36m";
+fn get_formatted_left_output(output: &str, color: OutputColor) -> String {
     let reset = "\x1b[0m";
 
-    format!("{blue_bold}{:>12}{reset}", output)
+    format!(
+        "{}{:>12}{reset}",
+        match color {
+            OutputColor::Green => "\x1b[1;32m",
+            OutputColor::Blue => "\x1b[1;36m",
+            OutputColor::Red => "\x1b[1;31m",
+        },
+        output
+    )
 }
 
 fn get_new_pb(length: u64, progress_message_left: &str) -> ProgressBar {
@@ -255,7 +329,7 @@ fn get_new_pb(length: u64, progress_message_left: &str) -> ProgressBar {
         ProgressStyle::default_bar()
             .template(&format!(
                 "{} [{{bar:40}}] {{pos}}/{{len}}{{msg}}",
-                get_formatted_left_output_blue(progress_message_left)
+                get_formatted_left_output(progress_message_left, OutputColor::Blue)
             ))
             .unwrap()
             .progress_chars("=> "),
