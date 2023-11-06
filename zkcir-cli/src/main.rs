@@ -111,8 +111,9 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         .map_err(|e| format!("Failed to copy contents to temp dir: {}", e))?;
 
     pb.println(format!(
-        "{} contents to temp ({num_copied_files} files)",
-        get_formatted_left_output("Copied", OutputColor::Green)
+        "{} {num_copied_files} files to {}",
+        get_formatted_left_output("Cloned", OutputColor::Green),
+        temp_dir.path().display()
     ));
     pb.inc(1);
 
@@ -132,7 +133,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
             .map_err(|e| format!("Failed to add `[workspace]` to `Cargo.toml: {}", e))?;
 
         pb.println(format!(
-            "{} empty `[workspace]` ({})",
+            "{} empty `[workspace]` to {}",
             get_formatted_left_output("Added", OutputColor::Green),
             temp_dir
                 .path()
@@ -206,7 +207,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         pb.set_message(": emit".to_string());
 
         let output_dir_path = current_dir.join("zkcir_out");
-        let output_cir_path = output_dir_path.join(circuit_name);
+        let output_cir_path = output_dir_path.join(circuit_name).with_extension("json");
 
         fs::create_dir_all(&output_dir_path)
             .map_err(|e| format!("Failed to create output directory: {}", e))?;
