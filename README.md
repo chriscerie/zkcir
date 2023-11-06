@@ -9,8 +9,10 @@ Zero knowledge circuits IR.
 
 # CLI Usage
 
+* Use rust nightly
+    * `rustup install nightly`
+    * `rustup default nightly`
 * Install CLI
-    * Run `cargo install --branch main --git https://github.com/chriscerie/zkcir zkcir`
-    * Alternatively clone repo and run `cargo install --path zkcir-cli`
+    * Clone repo and run `cargo install --path zkcir-cli`
 * Clone https://github.com/chriscerie/plonky2-example
 * Run `zkcir --example square_root`
