@@ -30,12 +30,12 @@ impl CirBuilder {
         }
     }
 
-    pub fn num_wires(mut self, num: u64) -> Self {
+    pub fn num_wires(&mut self, num: u64) -> &mut Self {
         self.config.num_wires = Some(num);
         self
     }
 
-    pub fn add_expression(mut self, x: Expression) -> Self {
+    pub fn add_expression(&mut self, x: Expression) -> &mut Self {
         self.expressions.push(x);
         self
     }
