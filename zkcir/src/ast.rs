@@ -8,10 +8,11 @@ pub enum Expression {
         rhs: Box<Expression>,
     },
 
-    Wire {
-        row: usize,
-        column: usize,
-    },
+    /// `Target` in plonky2
+    Wire { row: usize, column: usize },
+
+    /// `VirtualTarget` in plonky2
+    VirtualWire(usize),
 }
 
 #[derive(Serialize, Clone, Copy, Debug)]
