@@ -18,6 +18,9 @@ pub enum Expression {
 #[derive(Serialize, Clone, Copy, Debug)]
 pub enum BinOp {
     Add,
+    Divide,
+    EqualTo,
+    Exponent,
     Multiply,
     Subtract,
 }
