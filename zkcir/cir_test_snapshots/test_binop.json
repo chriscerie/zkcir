@@ -1,0 +1,35 @@
+{
+  "config": {
+    "num_wires": null
+  },
+  "expressions": [
+    {
+      "BinaryOperator": {
+        "lhs": {
+          "BinaryOperator": {
+            "lhs": {
+              "Wire": {
+                "row": 1,
+                "column": 2
+              }
+            },
+            "binop": "Add",
+            "rhs": {
+              "Wire": {
+                "row": 3,
+                "column": 4
+              }
+            }
+          }
+        },
+        "binop": "Multiply",
+        "rhs": {
+          "Wire": {
+            "row": 5,
+            "column": 6
+          }
+        }
+      }
+    }
+  ]
+}

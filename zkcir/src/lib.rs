@@ -1,5 +1,7 @@
 pub mod ir;
 
+mod ast;
+
 #[cfg(test)]
 mod test_util;
 

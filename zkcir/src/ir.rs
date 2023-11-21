@@ -1,6 +1,7 @@
 use serde::Serialize;
 use serde_json;
 
+use crate::ast::Expression;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
@@ -9,20 +10,33 @@ struct Config {
     num_wires: Option<u64>,
 }
 
-#[derive(Serialize, Clone, Copy, Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct CirBuilder {
     config: Config,
+    expressions: Vec<Expression>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct Operation {
+    name: String,
+    args: Vec<Expression>,
 }
 
 impl CirBuilder {
     pub fn new() -> Self {
         CirBuilder {
             config: Config { num_wires: None },
+            expressions: Vec::new(),
         }
     }
 
     pub fn num_wires(mut self, num: u64) -> Self {
         self.config.num_wires = Some(num);
+        self
+    }
+
+    pub fn add_expression(mut self, x: Expression) -> Self {
+        self.expressions.push(x);
         self
     }
 
@@ -48,7 +62,7 @@ impl Default for CirBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::test_ir_string;
+    use crate::{ast::BinOp, test_util::test_ir_string};
 
     use super::*;
 
@@ -63,5 +77,24 @@ mod tests {
     #[test]
     fn test_no_wires() {
         test_ir_string("test_no_wires", CirBuilder::new().to_string().unwrap());
+    }
+
+    #[test]
+    fn test_binop() {
+        test_ir_string(
+            "test_binop",
+            CirBuilder::new()
+                .add_expression(Expression::BinaryOperator {
+                    lhs: Box::new(Expression::BinaryOperator {
+                        lhs: Box::new(Expression::Wire { row: 1, column: 2 }),
+                        binop: BinOp::Add,
+                        rhs: Box::new(Expression::Wire { row: 3, column: 4 }),
+                    }),
+                    binop: BinOp::Multiply,
+                    rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
+                })
+                .to_string()
+                .unwrap(),
+        );
     }
 }
