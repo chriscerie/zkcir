@@ -1,6 +1,6 @@
 pub mod ir;
 
-mod ast;
+pub mod ast;
 
 #[cfg(test)]
 mod test_util;
