@@ -12,7 +12,7 @@ pub enum Expression {
     Wire { row: usize, column: usize },
 
     /// `VirtualTarget` in plonky2
-    VirtualWire(usize),
+    VirtualWire { index: usize },
 }
 
 #[derive(Serialize, Clone, Copy, Debug)]

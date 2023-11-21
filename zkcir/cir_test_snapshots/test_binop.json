@@ -15,9 +15,8 @@
             },
             "binop": "Add",
             "rhs": {
-              "Wire": {
-                "row": 3,
-                "column": 4
+              "VirtualWire": {
+                "index": 3
               }
             }
           }

@@ -89,7 +89,7 @@ mod tests {
                     lhs: Box::new(Expression::BinaryOperator {
                         lhs: Box::new(Expression::Wire { row: 1, column: 2 }),
                         binop: BinOp::Add,
-                        rhs: Box::new(Expression::VirtualWire(2)),
+                        rhs: Box::new(Expression::VirtualWire { index: 3 }),
                     }),
                     binop: BinOp::Multiply,
                     rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
