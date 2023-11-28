@@ -1,0 +1,20 @@
+CirBuilder {
+    config: Config {
+        num_wires: None,
+    },
+    expressions: [
+        Verify {
+            expr: BinaryOperator {
+                lhs: Wire {
+                    row: 5,
+                    column: 6,
+                },
+                binop: Equal,
+                rhs: Wire {
+                    row: 5,
+                    column: 6,
+                },
+            },
+        },
+    ],
+}

@@ -1,0 +1,24 @@
+CirBuilder {
+    config: Config {
+        num_wires: None,
+    },
+    expressions: [
+        BinaryOperator {
+            lhs: BinaryOperator {
+                lhs: Wire {
+                    row: 1,
+                    column: 2,
+                },
+                binop: Add,
+                rhs: VirtualWire {
+                    index: 3,
+                },
+            },
+            binop: Multiply,
+            rhs: Wire {
+                row: 5,
+                column: 6,
+            },
+        },
+    ],
+}

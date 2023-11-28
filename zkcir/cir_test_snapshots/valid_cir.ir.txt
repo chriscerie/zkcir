@@ -1,0 +1,8 @@
+CirBuilder {
+    config: Config {
+        num_wires: Some(
+            10,
+        ),
+    },
+    expressions: [],
+}

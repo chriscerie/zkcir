@@ -1,0 +1,28 @@
+{
+  "config": {
+    "num_wires": null
+  },
+  "expressions": [
+    {
+      "Verify": {
+        "expr": {
+          "BinaryOperator": {
+            "lhs": {
+              "Wire": {
+                "row": 5,
+                "column": 6
+              }
+            },
+            "binop": "Equal",
+            "rhs": {
+              "Wire": {
+                "row": 5,
+                "column": 6
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

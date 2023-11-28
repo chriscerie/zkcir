@@ -69,33 +69,41 @@ mod tests {
 
     #[test]
     fn test_valid_cir() {
-        test_ir_string(
-            "valid_cir",
-            CirBuilder::new().num_wires(10).to_string().unwrap(),
-        );
+        test_ir_string("valid_cir", CirBuilder::new().num_wires(10));
     }
 
     #[test]
     fn test_no_wires() {
-        test_ir_string("test_no_wires", CirBuilder::new().to_string().unwrap());
+        test_ir_string("test_no_wires", &CirBuilder::new());
     }
 
     #[test]
     fn test_binop() {
         test_ir_string(
             "test_binop",
-            CirBuilder::new()
-                .add_expression(Expression::BinaryOperator {
-                    lhs: Box::new(Expression::BinaryOperator {
-                        lhs: Box::new(Expression::Wire { row: 1, column: 2 }),
-                        binop: BinOp::Add,
-                        rhs: Box::new(Expression::VirtualWire { index: 3 }),
-                    }),
-                    binop: BinOp::Multiply,
+            CirBuilder::new().add_expression(Expression::BinaryOperator {
+                lhs: Box::new(Expression::BinaryOperator {
+                    lhs: Box::new(Expression::Wire { row: 1, column: 2 }),
+                    binop: BinOp::Add,
+                    rhs: Box::new(Expression::VirtualWire { index: 3 }),
+                }),
+                binop: BinOp::Multiply,
+                rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
+            }),
+        );
+    }
+
+    #[test]
+    fn test_verify() {
+        test_ir_string(
+            "test_verify",
+            CirBuilder::new().add_expression(Expression::Verify {
+                expr: Box::new(Expression::BinaryOperator {
+                    lhs: Box::new(Expression::Wire { row: 5, column: 6 }),
+                    binop: BinOp::Equal,
                     rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
-                })
-                .to_string()
-                .unwrap(),
+                }),
+            }),
         );
     }
 }
