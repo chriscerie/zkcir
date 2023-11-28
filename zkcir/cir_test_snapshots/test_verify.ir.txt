@@ -3,8 +3,8 @@ CirBuilder {
         num_wires: None,
     },
     expressions: [
-        Verify {
-            expr: BinaryOperator {
+        Verify(
+            BinaryOperator {
                 lhs: Wire {
                     row: 5,
                     column: 6,
@@ -15,6 +15,6 @@ CirBuilder {
                     column: 6,
                 },
             },
-        },
+        ),
     ],
 }

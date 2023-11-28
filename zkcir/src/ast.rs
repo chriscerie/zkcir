@@ -8,19 +8,19 @@ pub enum Expression {
         rhs: Box<Expression>,
     },
 
-    /// `Target` in plonky2
-    Wire {
-        row: usize,
-        column: usize,
-    },
+    Int(i64),
+
+    Verify(Box<Expression>),
 
     /// `VirtualTarget` in plonky2
     VirtualWire {
         index: usize,
     },
 
-    Verify {
-        expr: Box<Expression>,
+    /// `Target` in plonky2
+    Wire {
+        row: usize,
+        column: usize,
     },
 }
 

@@ -97,13 +97,13 @@ mod tests {
     fn test_verify() {
         test_ir_string(
             "test_verify",
-            CirBuilder::new().add_expression(Expression::Verify {
-                expr: Box::new(Expression::BinaryOperator {
+            CirBuilder::new().add_expression(Expression::Verify(Box::new(
+                Expression::BinaryOperator {
                     lhs: Box::new(Expression::Wire { row: 5, column: 6 }),
                     binop: BinOp::Equal,
                     rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
-                }),
-            }),
+                },
+            ))),
         );
     }
 }

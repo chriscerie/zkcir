@@ -5,20 +5,18 @@
   "expressions": [
     {
       "Verify": {
-        "expr": {
-          "BinaryOperator": {
-            "lhs": {
-              "Wire": {
-                "row": 5,
-                "column": 6
-              }
-            },
-            "binop": "Equal",
-            "rhs": {
-              "Wire": {
-                "row": 5,
-                "column": 6
-              }
+        "BinaryOperator": {
+          "lhs": {
+            "Wire": {
+              "row": 5,
+              "column": 6
+            }
+          },
+          "binop": "Equal",
+          "rhs": {
+            "Wire": {
+              "row": 5,
+              "column": 6
             }
           }
         }
