@@ -5,12 +5,12 @@ use crate::ast::Expression;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
-#[derive(Serialize, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
 struct Config {
     num_wires: Option<u64>,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
 pub struct CirBuilder {
     config: Config,
     expressions: Vec<Expression>,

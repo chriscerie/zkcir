@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
 pub enum Expression {
     BinaryOperator {
         lhs: Box<Expression>,
@@ -55,7 +55,7 @@ impl Expression {
 }
 
 /// `VirtualTarget` in plonky2
-#[derive(Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
 pub struct VirtualWire {
     pub index: usize,
     pub value: Option<u64>,
@@ -75,7 +75,7 @@ impl From<VirtualWire> for Expression {
 }
 
 /// `Target` in plonky2
-#[derive(Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
 pub struct Wire {
     pub row: usize,
     pub column: usize,
@@ -99,7 +99,7 @@ impl From<Wire> for Expression {
     }
 }
 
-#[derive(Serialize, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
 pub enum BinOp {
     Add,
     Divide,
