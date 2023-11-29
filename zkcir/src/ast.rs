@@ -30,8 +30,7 @@ impl Expression {
             Expression::VirtualWire(virtual_wire) => {
                 f(virtual_wire);
             }
-            Expression::Wire(_) => {}
-            Expression::Int(_) => {}
+            Expression::Wire(_) | Expression::Int(_) => {}
         }
     }
 
@@ -47,11 +46,10 @@ impl Expression {
             Expression::Verify(expr) => {
                 expr.visit_wires(f);
             }
-            Expression::VirtualWire { .. } => {}
             Expression::Wire(wire) => {
                 f(wire);
             }
-            Expression::Int(_) => {}
+            Expression::VirtualWire { .. } | Expression::Int(_) => {}
         }
     }
 }
