@@ -50,9 +50,15 @@ impl Expression {
         F: FnMut(&mut Wire),
     {
         match self {
-            Expression::BinaryOperator { lhs, rhs, .. } => {
+            Expression::BinaryOperator {
+                lhs, rhs, result, ..
+            } => {
                 lhs.visit_wires(f);
                 rhs.visit_wires(f);
+
+                if let Some(result) = result {
+                    result.visit_wires(f);
+                }
             }
             Expression::Verify(expr) => {
                 expr.visit_wires(f);
