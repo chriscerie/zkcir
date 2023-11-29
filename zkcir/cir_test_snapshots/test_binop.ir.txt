@@ -5,20 +5,33 @@ CirBuilder {
     expressions: [
         BinaryOperator {
             lhs: BinaryOperator {
-                lhs: Wire {
-                    row: 1,
-                    column: 2,
-                },
+                lhs: Wire(
+                    Wire {
+                        row: 1,
+                        column: 2,
+                        value: None,
+                    },
+                ),
                 binop: Add,
-                rhs: VirtualWire {
-                    index: 3,
-                },
+                rhs: VirtualWire(
+                    VirtualWire {
+                        index: 3,
+                        value: Some(
+                            23,
+                        ),
+                    },
+                ),
             },
             binop: Multiply,
-            rhs: Wire {
-                row: 5,
-                column: 6,
-            },
+            rhs: Wire(
+                Wire {
+                    row: 5,
+                    column: 6,
+                    value: Some(
+                        32,
+                    ),
+                },
+            ),
         },
     ],
 }

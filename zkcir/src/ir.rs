@@ -41,12 +41,41 @@ impl CirBuilder {
         self
     }
 
+    pub fn set_virtual_wire_value(&mut self, index: usize, value: u64) -> &mut Self {
+        for expression in &mut self.expressions {
+            expression.visit_virtual_wires(&mut |virtual_wire| {
+                if virtual_wire.index == index {
+                    virtual_wire.value = Some(value);
+                }
+            });
+        }
+        self
+    }
+
+    pub fn set_wire_value(&mut self, row: usize, column: usize, value: u64) -> &mut Self {
+        for expression in &mut self.expressions {
+            expression.visit_wires(&mut |wire| {
+                if wire.row == row && wire.column == column {
+                    wire.value = Some(value);
+                }
+            });
+        }
+        self
+    }
+
+    /// # Errors
+    ///
+    /// Errors from `serde_json::to_string_pretty`
     pub fn to_string(&self) -> Result<String, &'static str> {
         serde_json::to_string_pretty(&self).map_err(|_| "Failed serializing to json")
     }
 
     /// Appends discriminator to the start and end so zkcir's CLI can parse the output. You likely want `to_string`
     /// instead.
+    ///
+    /// # Errors
+    ///
+    /// Errors from `self.to_string()`
     pub fn to_cli_string(&self) -> Result<String, &'static str> {
         Ok(format!(
             "{START_DISCRIMINATOR}{}\n{END_DISCRIMINATOR}",
@@ -63,7 +92,10 @@ impl Default for CirBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::BinOp, test_util::test_ir_string};
+    use crate::{
+        ast::{BinOp, VirtualWire, Wire},
+        test_util::test_ir_string,
+    };
 
     use super::*;
 
@@ -81,15 +113,18 @@ mod tests {
     fn test_binop() {
         test_ir_string(
             "test_binop",
-            CirBuilder::new().add_expression(Expression::BinaryOperator {
-                lhs: Box::new(Expression::BinaryOperator {
-                    lhs: Box::new(Expression::Wire { row: 1, column: 2 }),
-                    binop: BinOp::Add,
-                    rhs: Box::new(Expression::VirtualWire { index: 3 }),
-                }),
-                binop: BinOp::Multiply,
-                rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
-            }),
+            CirBuilder::new()
+                .add_expression(Expression::BinaryOperator {
+                    lhs: Box::new(Expression::BinaryOperator {
+                        lhs: Box::new(Wire::new(1, 2).into()),
+                        binop: BinOp::Add,
+                        rhs: Box::new(VirtualWire::new(3).into()),
+                    }),
+                    binop: BinOp::Multiply,
+                    rhs: Box::new(Wire::new(5, 6).into()),
+                })
+                .set_wire_value(5, 6, 32)
+                .set_virtual_wire_value(3, 23),
         );
     }
 
@@ -99,9 +134,9 @@ mod tests {
             "test_verify",
             CirBuilder::new().add_expression(Expression::Verify(Box::new(
                 Expression::BinaryOperator {
-                    lhs: Box::new(Expression::Wire { row: 5, column: 6 }),
+                    lhs: Box::new(Wire::new(5, 6).into()),
                     binop: BinOp::Equal,
-                    rhs: Box::new(Expression::Wire { row: 5, column: 6 }),
+                    rhs: Box::new(Wire::new(5, 6).into()),
                 },
             ))),
         );

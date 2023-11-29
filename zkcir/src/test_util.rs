@@ -14,7 +14,7 @@ pub fn test_ir_string(test_name: &str, cir: &CirBuilder) {
     let test_ir_path = TEST_PROJECTS_ROOT.join(test_name).with_extension("ir.txt");
     let test_json_path = TEST_PROJECTS_ROOT.join(test_name).with_extension("json");
 
-    let ir = format!("{:#?}", cir);
+    let ir = format!("{cir:#?}");
     let cir_json = cir.to_string().unwrap();
 
     if let Ok(expected) = fs::read_to_string(&test_json_path) {

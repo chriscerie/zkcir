@@ -9,14 +9,16 @@
           "lhs": {
             "Wire": {
               "row": 5,
-              "column": 6
+              "column": 6,
+              "value": null
             }
           },
           "binop": "Equal",
           "rhs": {
             "Wire": {
               "row": 5,
-              "column": 6
+              "column": 6,
+              "value": null
             }
           }
         }

@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::struct_excessive_bools)]
+
 pub mod ir;
 
 pub mod ast;

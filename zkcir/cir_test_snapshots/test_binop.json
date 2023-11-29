@@ -10,13 +10,15 @@
             "lhs": {
               "Wire": {
                 "row": 1,
-                "column": 2
+                "column": 2,
+                "value": null
               }
             },
             "binop": "Add",
             "rhs": {
               "VirtualWire": {
-                "index": 3
+                "index": 3,
+                "value": 23
               }
             }
           }
@@ -25,7 +27,8 @@
         "rhs": {
           "Wire": {
             "row": 5,
-            "column": 6
+            "column": 6,
+            "value": 32
           }
         }
       }
