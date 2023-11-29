@@ -25,9 +25,15 @@ impl Expression {
         F: FnMut(&mut VirtualWire),
     {
         match self {
-            Expression::BinaryOperator { lhs, rhs, .. } => {
+            Expression::BinaryOperator {
+                lhs, rhs, result, ..
+            } => {
                 lhs.visit_virtual_wires(f);
                 rhs.visit_virtual_wires(f);
+
+                if let Some(result) = result {
+                    result.visit_virtual_wires(f);
+                }
             }
             Expression::Verify(expr) => {
                 expr.visit_virtual_wires(f);
