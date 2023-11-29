@@ -21,7 +21,13 @@ CirBuilder {
                         ),
                     },
                 ),
-                result: None,
+                result: Wire(
+                    Wire {
+                        row: 10,
+                        column: 11,
+                        value: None,
+                    },
+                ),
             },
             binop: Multiply,
             rhs: Wire(
@@ -33,7 +39,13 @@ CirBuilder {
                     ),
                 },
             ),
-            result: None,
+            result: Wire(
+                Wire {
+                    row: 10,
+                    column: 11,
+                    value: None,
+                },
+            ),
         },
     ],
 }

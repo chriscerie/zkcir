@@ -6,7 +6,7 @@ pub enum Expression {
         lhs: Box<Expression>,
         binop: BinOp,
         rhs: Box<Expression>,
-        result: Option<WireOrVirtualWire>,
+        result: Box<Expression>,
     },
 
     Int(i64),
@@ -57,12 +57,6 @@ impl Expression {
             Expression::VirtualWire { .. } | Expression::Int(_) | Expression::Random(_) => {}
         }
     }
-}
-
-#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
-pub enum WireOrVirtualWire {
-    Wire(Wire),
-    VirtualWire(VirtualWire),
 }
 
 /// `VirtualTarget` in plonky2

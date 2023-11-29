@@ -21,7 +21,13 @@
                 "value": 23
               }
             },
-            "result": null
+            "result": {
+              "Wire": {
+                "row": 10,
+                "column": 11,
+                "value": null
+              }
+            }
           }
         },
         "binop": "Multiply",
@@ -32,7 +38,13 @@
             "value": 32
           }
         },
-        "result": null
+        "result": {
+          "Wire": {
+            "row": 10,
+            "column": 11,
+            "value": null
+          }
+        }
       }
     }
   ]
