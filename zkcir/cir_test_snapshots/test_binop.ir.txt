@@ -21,6 +21,7 @@ CirBuilder {
                         ),
                     },
                 ),
+                result: None,
             },
             binop: Multiply,
             rhs: Wire(
@@ -32,6 +33,7 @@ CirBuilder {
                     ),
                 },
             ),
+            result: None,
         },
     ],
 }

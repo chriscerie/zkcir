@@ -20,6 +20,15 @@ CirBuilder {
                         value: None,
                     },
                 ),
+                result: Some(
+                    Wire(
+                        Wire {
+                            row: 10,
+                            column: 11,
+                            value: None,
+                        },
+                    ),
+                ),
             },
         ),
     ],

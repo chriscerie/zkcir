@@ -20,7 +20,8 @@
                 "index": 3,
                 "value": 23
               }
-            }
+            },
+            "result": null
           }
         },
         "binop": "Multiply",
@@ -30,7 +31,8 @@
             "column": 6,
             "value": 32
           }
-        }
+        },
+        "result": null
       }
     }
   ]

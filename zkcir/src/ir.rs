@@ -93,7 +93,7 @@ impl Default for CirBuilder {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{BinOp, VirtualWire, Wire},
+        ast::{BinOp, VirtualWire, Wire, WireOrVirtualWire},
         test_util::test_ir_string,
     };
 
@@ -119,9 +119,11 @@ mod tests {
                         lhs: Box::new(Wire::new(1, 2).into()),
                         binop: BinOp::Add,
                         rhs: Box::new(VirtualWire::new(3).into()),
+                        result: None,
                     }),
                     binop: BinOp::Multiply,
                     rhs: Box::new(Wire::new(5, 6).into()),
+                    result: None,
                 })
                 .set_wire_value(5, 6, 32)
                 .set_virtual_wire_value(3, 23),
@@ -137,6 +139,7 @@ mod tests {
                     lhs: Box::new(Wire::new(5, 6).into()),
                     binop: BinOp::Equal,
                     rhs: Box::new(Wire::new(5, 6).into()),
+                    result: Some(WireOrVirtualWire::Wire(Wire::new(10, 11))),
                 },
             ))),
         );

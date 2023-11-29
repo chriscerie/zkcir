@@ -6,9 +6,14 @@ pub enum Expression {
         lhs: Box<Expression>,
         binop: BinOp,
         rhs: Box<Expression>,
+        result: Option<WireOrVirtualWire>,
     },
 
     Int(i64),
+
+    // Wrapped value is the id
+    Random(usize),
+
     Verify(Box<Expression>),
     VirtualWire(VirtualWire),
     Wire(Wire),
@@ -30,7 +35,7 @@ impl Expression {
             Expression::VirtualWire(virtual_wire) => {
                 f(virtual_wire);
             }
-            Expression::Wire(_) | Expression::Int(_) => {}
+            Expression::Wire(_) | Expression::Int(_) | Expression::Random(_) => {}
         }
     }
 
@@ -49,9 +54,15 @@ impl Expression {
             Expression::Wire(wire) => {
                 f(wire);
             }
-            Expression::VirtualWire { .. } | Expression::Int(_) => {}
+            Expression::VirtualWire { .. } | Expression::Int(_) | Expression::Random(_) => {}
         }
     }
+}
+
+#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
+pub enum WireOrVirtualWire {
+    Wire(Wire),
+    VirtualWire(VirtualWire),
 }
 
 /// `VirtualTarget` in plonky2
