@@ -36,4 +36,5 @@ pub enum BinOp {
     LessThanEqual,
     Multiply,
     Subtract,
+    MultipleSubtract,
 }
