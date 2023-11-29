@@ -6,7 +6,7 @@ pub enum Expression {
         lhs: Box<Expression>,
         binop: BinOp,
         rhs: Box<Expression>,
-        result: Box<Expression>,
+        result: Option<Box<Expression>>,
     },
 
     Int(i64),

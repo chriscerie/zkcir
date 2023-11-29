@@ -119,11 +119,11 @@ mod tests {
                         lhs: Box::new(Wire::new(1, 2).into()),
                         binop: BinOp::Add,
                         rhs: Box::new(VirtualWire::new(3).into()),
-                        result: Box::new(Wire::new(10, 11).into()),
+                        result: None,
                     }),
                     binop: BinOp::Multiply,
                     rhs: Box::new(Wire::new(5, 6).into()),
-                    result: Box::new(Wire::new(10, 11).into()),
+                    result: None,
                 })
                 .set_wire_value(5, 6, 32)
                 .set_virtual_wire_value(3, 23),
@@ -139,7 +139,7 @@ mod tests {
                     lhs: Box::new(Wire::new(5, 6).into()),
                     binop: BinOp::Equal,
                     rhs: Box::new(Wire::new(5, 6).into()),
-                    result: Box::new(Wire::new(10, 11).into()),
+                    result: Some(Box::new(Wire::new(10, 11).into())),
                 },
             ))),
         );
