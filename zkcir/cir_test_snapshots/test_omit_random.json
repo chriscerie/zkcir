@@ -31,9 +31,7 @@
           "Wire": {
             "row": 5,
             "column": 6,
-            "value": {
-              "U64": 32
-            }
+            "value": "Random"
           }
         },
         "result": null

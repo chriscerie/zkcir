@@ -31,7 +31,7 @@ CirBuilder {
                     row: 5,
                     column: 6,
                     value: Some(
-                        U64(
+                        RandomU64(
                             32,
                         ),
                     ),

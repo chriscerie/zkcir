@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde_json;
 
 use crate::ast::Expression;
+use crate::ast::Value;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
@@ -41,7 +42,7 @@ impl CirBuilder {
         self
     }
 
-    pub fn set_virtual_wire_value(&mut self, index: usize, value: u64) -> &mut Self {
+    pub fn set_virtual_wire_value(&mut self, index: usize, value: Value) -> &mut Self {
         for expression in &mut self.expressions {
             expression.visit_virtual_wires(&mut |virtual_wire| {
                 if virtual_wire.index == index {
@@ -52,7 +53,7 @@ impl CirBuilder {
         self
     }
 
-    pub fn set_wire_value(&mut self, row: usize, column: usize, value: u64) -> &mut Self {
+    pub fn set_wire_value(&mut self, row: usize, column: usize, value: Value) -> &mut Self {
         for expression in &mut self.expressions {
             expression.visit_wires(&mut |wire| {
                 if wire.row == row && wire.column == column {
@@ -68,6 +69,25 @@ impl CirBuilder {
     /// Errors from `serde_json::to_string_pretty`
     pub fn to_string(&self) -> Result<String, &'static str> {
         serde_json::to_string_pretty(&self).map_err(|_| "Failed serializing to json")
+    }
+
+    /// Same as `to_string` but omits random values. Useful for snapshot tests.
+    ///
+    /// # Errors
+    ///
+    /// Errors from `serde_json::to_string_pretty`
+    pub fn to_string_omit_random(&self) -> Result<String, &'static str> {
+        let mut new = self.clone();
+
+        for expression in &mut new.expressions {
+            expression.visit_wires(&mut |wire| {
+                if let Some(Value::RandomU64(_)) = wire.value {
+                    wire.value = Some(Value::Random);
+                }
+            });
+        }
+
+        serde_json::to_string_pretty(&new).map_err(|_| "Failed serializing to json")
     }
 
     /// Appends discriminator to the start and end so zkcir's CLI can parse the output. You likely want `to_string`
@@ -125,8 +145,8 @@ mod tests {
                     rhs: Box::new(Wire::new(5, 6).into()),
                     result: None,
                 })
-                .set_wire_value(5, 6, 32)
-                .set_virtual_wire_value(3, 23),
+                .set_wire_value(5, 6, Value::U64(32))
+                .set_virtual_wire_value(3, Value::U64(23)),
         );
     }
 
@@ -142,6 +162,27 @@ mod tests {
                     result: Some(Box::new(Wire::new(10, 11).into())),
                 },
             ))),
+        );
+    }
+
+    #[test]
+    fn test_omit_random() {
+        test_ir_string(
+            "test_omit_random",
+            CirBuilder::new()
+                .add_expression(Expression::BinaryOperator {
+                    lhs: Box::new(Expression::BinaryOperator {
+                        lhs: Box::new(Wire::new(1, 2).into()),
+                        binop: BinOp::Add,
+                        rhs: Box::new(VirtualWire::new(3).into()),
+                        result: None,
+                    }),
+                    binop: BinOp::Multiply,
+                    rhs: Box::new(Wire::new(5, 6).into()),
+                    result: None,
+                })
+                .set_wire_value(5, 6, Value::RandomU64(32))
+                .set_virtual_wire_value(3, Value::U64(23)),
         );
     }
 }

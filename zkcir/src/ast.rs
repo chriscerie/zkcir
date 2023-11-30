@@ -20,6 +20,38 @@ pub enum Expression {
 }
 
 impl Expression {
+    pub fn visit_values<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Value),
+    {
+        match self {
+            Expression::BinaryOperator {
+                lhs, rhs, result, ..
+            } => {
+                lhs.visit_values(f);
+                rhs.visit_values(f);
+
+                if let Some(result) = result {
+                    result.visit_values(f);
+                }
+            }
+            Expression::Verify(expr) => {
+                expr.visit_values(f);
+            }
+            Expression::VirtualWire(virtual_wire) => {
+                if let Some(value) = &mut virtual_wire.value {
+                    f(value);
+                }
+            }
+            Expression::Wire(wire) => {
+                if let Some(value) = &mut wire.value {
+                    f(value);
+                }
+            }
+            Expression::Int(_) | Expression::Random(_) => {}
+        }
+    }
+
     pub fn visit_virtual_wires<F>(&mut self, f: &mut F)
     where
         F: FnMut(&mut VirtualWire),
@@ -71,11 +103,20 @@ impl Expression {
     }
 }
 
+#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
+pub enum Value {
+    U64(u64),
+    RandomU64(u64),
+
+    /// Enables generating deterministic IRs even when using random values. Useful for snapshot tests
+    Random,
+}
+
 /// `VirtualTarget` in plonky2
-#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
 pub struct VirtualWire {
     pub index: usize,
-    pub value: Option<u64>,
+    pub value: Option<Value>,
 }
 
 impl VirtualWire {
@@ -92,11 +133,11 @@ impl From<VirtualWire> for Expression {
 }
 
 /// `Target` in plonky2
-#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
 pub struct Wire {
     pub row: usize,
     pub column: usize,
-    pub value: Option<u64>,
+    pub value: Option<Value>,
 }
 
 impl Wire {

@@ -15,7 +15,7 @@ pub fn test_ir_string(test_name: &str, cir: &CirBuilder) {
     let test_json_path = TEST_PROJECTS_ROOT.join(test_name).with_extension("json");
 
     let ir = format!("{cir:#?}");
-    let cir_json = cir.to_string().unwrap();
+    let cir_json = cir.to_string_omit_random().unwrap();
 
     if let Ok(expected) = fs::read_to_string(&test_json_path) {
         pretty_assertions::assert_str_eq!(
