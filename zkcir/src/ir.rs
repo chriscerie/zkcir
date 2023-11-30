@@ -85,6 +85,12 @@ impl CirBuilder {
                     wire.value = Some(Value::Random);
                 }
             });
+
+            expression.visit_virtual_wires(&mut |wire| {
+                if let Some(Value::RandomU64(_)) = wire.value {
+                    wire.value = Some(Value::Random);
+                }
+            });
         }
 
         serde_json::to_string_pretty(&new).map_err(|_| "Failed serializing to json")
