@@ -1,3 +1,8 @@
+extern crate alloc;
+
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
 use serde::Serialize;
 use serde_json;
 
@@ -118,6 +123,8 @@ impl Default for CirBuilder {
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
+
     use crate::{
         ast::{BinOp, VirtualWire, Wire},
         test_util::test_ir_string,

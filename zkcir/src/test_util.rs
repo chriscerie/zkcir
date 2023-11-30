@@ -1,8 +1,15 @@
+extern crate alloc;
+
+#[cfg(test)]
+extern crate std;
+
 use std::{
     fs,
     io::Write,
     path::{Path, PathBuf},
 };
+
+use alloc::format;
 
 use crate::ir::CirBuilder;
 

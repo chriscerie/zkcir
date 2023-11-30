@@ -1,3 +1,6 @@
+extern crate alloc;
+
+use alloc::boxed::Box;
 use serde::Serialize;
 
 #[derive(PartialEq, Eq, Serialize, Clone, Debug)]

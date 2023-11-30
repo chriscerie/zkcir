@@ -26,3 +26,32 @@ jobs:
       - name: Rustfmt
         run: cargo fmt -- --check
         if: success() || failure()
+
+  wasm32:
+    name: wasm32 compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install nightly wasm32 toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
+
+      - name: Add target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Check zkcir
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path zkcir/Cargo.toml --target wasm32-unknown-unknown --no-default-features
+        env:
+          RUSTFLAGS: -Copt-level=3 -Cdebug-assertions -Coverflow-checks=y -Cdebuginfo=0
+          RUST_LOG: 1
+          CARGO_INCREMENTAL: 1
+          RUST_BACKTRACE: 1

@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::struct_excessive_bools)]
+#![no_std]
 
 pub mod ir;
 
