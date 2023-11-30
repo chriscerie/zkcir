@@ -7,14 +7,14 @@ use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
 #[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
-struct Config {
+pub struct Config {
     num_wires: Option<u64>,
 }
 
 #[derive(PartialEq, Eq, Serialize, Clone, Debug)]
 pub struct CirBuilder {
-    config: Config,
-    expressions: Vec<Expression>,
+    pub config: Config,
+    pub expressions: Vec<Expression>,
 }
 
 #[derive(Serialize, Clone, Debug)]
