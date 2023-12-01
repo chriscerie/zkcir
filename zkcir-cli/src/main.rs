@@ -10,7 +10,10 @@ use std::{
 use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
 use walkdir::{DirEntry, WalkDir};
-use zkcir::{END_DISCRIMINATOR, START_DISCRIMINATOR};
+use zkcir::{
+    END_DISCRIMINATOR_JSON, END_DISCRIMINATOR_SOURCE, START_DISCRIMINATOR_JSON,
+    START_DISCRIMINATOR_SOURCE,
+};
 
 use args::{get_args, Args};
 
@@ -69,6 +72,11 @@ impl TargetFramework {
 }
 
 fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String> {
+    if !args.json && !args.source {
+        pb.abandon();
+        return Err("Either `--json` and/or `--source` must be enabled".to_string());
+    }
+
     pb.set_message(": cargo");
     let parsed_cargo = get_parsed_cargo()?;
 
@@ -187,16 +195,27 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         let output_str = String::from_utf8(output.stdout)
             .map_err(|e| format!("Failed to convert output to string: {}", e))?;
 
-        let start_byte = output_str
-            .find(START_DISCRIMINATOR)
+        let start_byte_json = output_str
+            .find(START_DISCRIMINATOR_JSON)
             .ok_or("Start discriminator of output not found")?
-            + START_DISCRIMINATOR.len();
+            + START_DISCRIMINATOR_JSON.len();
 
-        let end_byte = output_str
-            .find(END_DISCRIMINATOR)
+        let end_byte_json = output_str
+            .find(END_DISCRIMINATOR_JSON)
             .ok_or("End discriminator of output not found")?;
 
-        let json_string = &output_str[start_byte..end_byte].trim();
+        let json_string = &output_str[start_byte_json..end_byte_json].trim();
+
+        let start_byte_source = output_str
+            .find(START_DISCRIMINATOR_SOURCE)
+            .ok_or("Start discriminator of output not found")?
+            + START_DISCRIMINATOR_SOURCE.len();
+
+        let end_byte_source = output_str
+            .find(END_DISCRIMINATOR_SOURCE)
+            .ok_or("End discriminator of output not found")?;
+
+        let source_string = &output_str[start_byte_source..end_byte_source].trim();
 
         pb.println(format!(
             "{} cir output",
@@ -207,43 +226,86 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         pb.set_message(": emit".to_string());
 
         let output_dir_path = current_dir.join("zkcir_out");
-        let output_cir_path = output_dir_path.join(circuit_name).with_extension("json");
+        let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
+        let output_cir_path_source = output_dir_path.join(&circuit_name).with_extension("cir");
 
         fs::create_dir_all(&output_dir_path)
             .map_err(|e| format!("Failed to create output directory: {}", e))?;
 
-        if output_cir_path.exists() {
+        if output_cir_path_json.exists() && args.json {
             if !args.allow_dirty {
                 pb.abandon();
-                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path.display()));
+                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_json.display()));
             }
 
-            fs::remove_file(&output_cir_path)
+            fs::remove_file(&output_cir_path_json)
                 .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
         }
 
-        let mut file = File::options()
-            .read(true)
-            .write(true)
-            .create_new(true)
-            .open(&output_cir_path)
-            .map_err(|e| format!("Failed to create output file: {}", e))?;
+        if output_cir_path_source.exists() && args.source {
+            if !args.allow_dirty {
+                pb.abandon();
+                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_source.display()));
+            }
 
-        file.write_all(
-            json_string
-                // Escape sequences are parsed as actual string data
-                .replace("\\n", "\n")
-                .replace("\\\"", "\"")
-                .as_bytes(),
-        )
-        .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
+            fs::remove_file(&output_cir_path_source)
+                .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+        }
 
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template(&format!("{{msg}} {}", output_cir_path.display()))
-                .unwrap(),
-        );
-        pb.finish_with_message(get_formatted_left_output("Emitted", OutputColor::Green));
+        if args.json {
+            pb.inc(1);
+
+            let mut file = File::options()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&output_cir_path_json)
+                .map_err(|e| format!("Failed to create output file: {}", e))?;
+
+            file.write_all(
+                json_string
+                    // Escape sequences are parsed as actual string data
+                    .replace("\\n", "\n")
+                    .replace("\\\"", "\"")
+                    .as_bytes(),
+            )
+            .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
+
+            pb.println(format!(
+                "{} json cir: {}",
+                get_formatted_left_output("Emitted", OutputColor::Green),
+                output_cir_path_json.display()
+            ));
+        }
+
+        if args.source {
+            pb.inc(1);
+
+            let mut file = File::options()
+                .read(true)
+                .write(true)
+                .create_new(true)
+                .open(&output_cir_path_source)
+                .map_err(|e| format!("Failed to create output file: {}", e))?;
+
+            file.write_all(
+                source_string
+                    // Escape sequences are parsed as actual string data
+                    .replace("\\n", "\n")
+                    .replace("\\\"", "\"")
+                    .as_bytes(),
+            )
+            .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
+
+            pb.println(format!(
+                "{} source cir: {}",
+                get_formatted_left_output("Emitted", OutputColor::Green),
+                output_cir_path_source.display()
+            ));
+        }
+
+        pb.set_style(ProgressStyle::default_bar().template("{msg}").unwrap());
+        pb.finish_with_message(get_formatted_left_output("Finished", OutputColor::Green));
     } else {
         return Err("Could not find circuit to run".to_string());
     }

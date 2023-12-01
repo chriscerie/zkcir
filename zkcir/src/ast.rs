@@ -166,7 +166,7 @@ pub enum Value {
     #[display(fmt = "{_0}u64")]
     U64(u64),
 
-    #[display(fmt = "random!({_0}u64)")]
+    #[display(fmt = "(random!() -> {_0}u64)")]
     RandomU64(u64),
 
     /// Enables generating deterministic IRs even when using random values. Useful for snapshot tests

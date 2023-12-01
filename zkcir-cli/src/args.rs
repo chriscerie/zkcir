@@ -7,6 +7,14 @@ pub struct Args {
     #[arg(short, long)]
     pub example: Option<String>,
 
+    /// when enabled, emits ir as json; this and/or `source` must be enabled
+    #[arg(long)]
+    pub json: bool,
+
+    /// when enabled, emits ir as source code; this and/or `json` must be enabled
+    #[arg(long)]
+    pub source: bool,
+
     /// when enabled, replaces output file(s) when they already exist
     #[arg(long)]
     pub allow_dirty: bool,
