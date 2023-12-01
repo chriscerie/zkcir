@@ -6,9 +6,9 @@ use alloc::{
     string::{String, ToString},
 };
 use derive_more::Display;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub enum Expression {
     BinaryOperator {
         lhs: Box<Expression>,
@@ -161,7 +161,7 @@ impl Expression {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug, Display)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug, Display)]
 pub enum Value {
     #[display(fmt = "{_0}u64")]
     U64(u64),
@@ -175,7 +175,7 @@ pub enum Value {
 }
 
 /// `VirtualTarget` in plonky2
-#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct VirtualWire {
     pub index: usize,
     pub value: Option<Value>,
@@ -195,7 +195,7 @@ impl From<VirtualWire> for Expression {
 }
 
 /// `Target` in plonky2
-#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Wire {
     pub row: usize,
     pub column: usize,
@@ -219,7 +219,7 @@ impl From<Wire> for Expression {
     }
 }
 
-#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug, Display)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug, Display)]
 pub enum BinOp {
     #[display(fmt = "+")]
     Add,

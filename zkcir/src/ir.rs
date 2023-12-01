@@ -3,22 +3,21 @@ extern crate alloc;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use serde::Deserialize;
 use serde::Serialize;
 use serde_json;
 
 use crate::ast::Expression;
 use crate::ast::Value;
-use crate::END_DISCRIMINATOR_JSON;
-use crate::END_DISCRIMINATOR_SOURCE;
-use crate::START_DISCRIMINATOR_JSON;
-use crate::START_DISCRIMINATOR_SOURCE;
+use crate::END_DISCRIMINATOR;
+use crate::START_DISCRIMINATOR;
 
-#[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Config {
     num_wires: Option<u64>,
 }
 
-#[derive(PartialEq, Eq, Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub struct CirBuilder {
     pub config: Config,
     pub expressions: Vec<Expression>,
@@ -111,8 +110,8 @@ impl CirBuilder {
     /// Errors from `self.to_string()`
     pub fn to_cli_string(&self) -> Result<String, &'static str> {
         Ok(format!(
-            "{START_DISCRIMINATOR_JSON}{}\n{END_DISCRIMINATOR_JSON}\n{START_DISCRIMINATOR_SOURCE}{}\n{END_DISCRIMINATOR_SOURCE}\n",
-            self.to_string()?, self.to_code_ir()
+            "{START_DISCRIMINATOR}{}\n{END_DISCRIMINATOR}\n",
+            self.to_string()?
         ))
     }
 
@@ -123,6 +122,13 @@ impl CirBuilder {
             .map(Expression::to_code_ir)
             .collect::<Vec<_>>()
             .join("\n\n")
+    }
+
+    /// # Errors
+    ///
+    /// Errors if cannot deserialize from json
+    pub fn from_json(json_str: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(json_str)
     }
 }
 

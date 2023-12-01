@@ -11,8 +11,5 @@ pub mod ast;
 mod test_util;
 
 // Discriminators for zkcir's CLI to parse the output
-pub const START_DISCRIMINATOR_JSON: &str = "<ZKCIR_JSON_START>";
-pub const END_DISCRIMINATOR_JSON: &str = "<ZKCIR_JSON_END>";
-
-pub const END_DISCRIMINATOR_SOURCE: &str = "<ZKCIR_SOURCE_END>";
-pub const START_DISCRIMINATOR_SOURCE: &str = "<ZKCIR_SOURCE_START>";
+pub const START_DISCRIMINATOR: &str = "<ZKCIR_JSON_START>";
+pub const END_DISCRIMINATOR: &str = "<ZKCIR_JSON_END>";

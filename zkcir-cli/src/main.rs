@@ -10,10 +10,7 @@ use std::{
 use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
 use walkdir::{DirEntry, WalkDir};
-use zkcir::{
-    END_DISCRIMINATOR_JSON, END_DISCRIMINATOR_SOURCE, START_DISCRIMINATOR_JSON,
-    START_DISCRIMINATOR_SOURCE,
-};
+use zkcir::{ir::CirBuilder, END_DISCRIMINATOR, START_DISCRIMINATOR};
 
 use args::{get_args, Args};
 
@@ -196,26 +193,22 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
             .map_err(|e| format!("Failed to convert output to string: {}", e))?;
 
         let start_byte_json = output_str
-            .find(START_DISCRIMINATOR_JSON)
+            .find(START_DISCRIMINATOR)
             .ok_or("Start discriminator of output not found")?
-            + START_DISCRIMINATOR_JSON.len();
+            + START_DISCRIMINATOR.len();
 
         let end_byte_json = output_str
-            .find(END_DISCRIMINATOR_JSON)
+            .find(END_DISCRIMINATOR)
             .ok_or("End discriminator of output not found")?;
 
-        let json_string = &output_str[start_byte_json..end_byte_json].trim();
+        let json_string = &output_str[start_byte_json..end_byte_json]
+            .trim()
+            // Escape sequences are parsed as actual string data
+            .replace("\\n", "\n")
+            .replace("\\\"", "\"");
 
-        let start_byte_source = output_str
-            .find(START_DISCRIMINATOR_SOURCE)
-            .ok_or("Start discriminator of output not found")?
-            + START_DISCRIMINATOR_SOURCE.len();
-
-        let end_byte_source = output_str
-            .find(END_DISCRIMINATOR_SOURCE)
-            .ok_or("End discriminator of output not found")?;
-
-        let source_string = &output_str[start_byte_source..end_byte_source].trim();
+        let cir = CirBuilder::from_json(json_string)
+            .map_err(|e| format!("Failed to parse json CIR: {}", e))?;
 
         pb.println(format!(
             "{} cir output",
@@ -288,14 +281,8 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
                 .open(&output_cir_path_source)
                 .map_err(|e| format!("Failed to create output file: {}", e))?;
 
-            file.write_all(
-                source_string
-                    // Escape sequences are parsed as actual string data
-                    .replace("\\n", "\n")
-                    .replace("\\\"", "\"")
-                    .as_bytes(),
-            )
-            .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
+            file.write_all(cir.to_code_ir().as_bytes())
+                .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
 
             pb.println(format!(
                 "{} source cir: {}",
