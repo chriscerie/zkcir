@@ -113,6 +113,15 @@ impl CirBuilder {
             self.to_string()?
         ))
     }
+
+    #[must_use]
+    pub fn to_code_ir(&self) -> String {
+        self.expressions
+            .iter()
+            .map(Expression::to_code_ir)
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
 }
 
 impl Default for CirBuilder {
