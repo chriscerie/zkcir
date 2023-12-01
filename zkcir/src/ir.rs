@@ -8,8 +8,10 @@ use serde_json;
 
 use crate::ast::Expression;
 use crate::ast::Value;
-use crate::END_DISCRIMINATOR;
-use crate::START_DISCRIMINATOR;
+use crate::END_DISCRIMINATOR_JSON;
+use crate::END_DISCRIMINATOR_SOURCE;
+use crate::START_DISCRIMINATOR_JSON;
+use crate::START_DISCRIMINATOR_SOURCE;
 
 #[derive(PartialEq, Eq, Serialize, Clone, Copy, Debug)]
 pub struct Config {
@@ -109,8 +111,8 @@ impl CirBuilder {
     /// Errors from `self.to_string()`
     pub fn to_cli_string(&self) -> Result<String, &'static str> {
         Ok(format!(
-            "{START_DISCRIMINATOR}{}\n{END_DISCRIMINATOR}",
-            self.to_string()?
+            "{START_DISCRIMINATOR_JSON}{}\n{END_DISCRIMINATOR_JSON}\n{START_DISCRIMINATOR_SOURCE}{}\n{END_DISCRIMINATOR_SOURCE}\n",
+            self.to_string()?, self.to_code_ir()
         ))
     }
 

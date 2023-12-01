@@ -64,7 +64,7 @@ pub fn test_code_ir(test_name: &str, code_ir: &String) {
     let test_ir_path = TEST_PROJECTS_ROOT
         .join("code_ir_test_snapshots")
         .join(test_name)
-        .with_extension("txt");
+        .with_extension("cir");
 
     if let Ok(expected) = fs::read_to_string(&test_ir_path) {
         pretty_assertions::assert_str_eq!(
