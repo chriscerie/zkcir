@@ -10,6 +10,7 @@ use std::{
 use targets::TargetFramework;
 use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
+use toml::Value;
 use walkdir::{DirEntry, WalkDir};
 use zkcir::{ir::CirBuilder, END_DISCRIMINATOR, START_DISCRIMINATOR};
 
@@ -28,7 +29,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
     }
 
     pb.set_message(": cargo");
-    let parsed_cargo = get_parsed_cargo()?;
+    let mut parsed_cargo = get_parsed_cargo()?;
 
     let dependencies = parsed_cargo
         .get("dependencies")
@@ -75,9 +76,46 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
     ));
     pb.inc(1);
 
+    let parsed_cargo_table = parsed_cargo
+        .as_table_mut()
+        .ok_or("Root of Cargo.toml is not a table")?;
+
+    let patch_table = parsed_cargo_table
+        .entry("patch")
+        .or_insert(Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or("Expected `patch` to be a table")?;
+
+    let crates_io_table = patch_table
+        .entry("crates-io")
+        .or_insert(Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or("Expected `crates-io` to be a table")?;
+
+    for target_dependency in target_framework.get_dependencies() {
+        for dependency_name in target_dependency.dependency_names {
+            let dependency_table = crates_io_table
+                .entry(dependency_name)
+                .or_insert(Value::Table(Default::default()))
+                .as_table_mut()
+                .ok_or("Expected dependency entry to be a table")?;
+
+            dependency_table.insert(
+                "git".to_string(),
+                Value::String(target_dependency.git_url.clone()),
+            );
+        }
+    }
+
+    pb.println(format!(
+        "{} dependencies",
+        get_formatted_left_output("Patched", OutputColor::Green)
+    ));
+    pb.inc(1);
+
     // If the root temp dir contains a workspace `Cargo.toml`, cargo would fail to build unless there is a
     // `[workspace]` in this `Cargo.toml`
-    if parsed_cargo.get("workspace").is_none() {
+    if parsed_cargo_table.get("workspace").is_none() {
         pb.inc_length(1);
         pb.set_message(": add [workspace]");
 
@@ -87,6 +125,8 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         let prepend_chars = "[workspace]\n";
         toml_string.insert_str(0, prepend_chars);
 
+        // For some reason doing `parsed_cargo_table.insert("workspace".to_string(), Value::Table(Default::default()));` instead
+        // doesn't work when running plonky2-examples
         fs::write(temp_dir.path().join("Cargo.toml"), toml_string)
             .map_err(|e| format!("Failed to add `[workspace]` to `Cargo.toml: {}", e))?;
 
@@ -135,8 +175,6 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         fs::remove_file(&output_cir_path_source)
             .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
     }
-
-    target_framework.replace_deps(temp_dir.path(), pb, dependencies)?;
 
     pb.set_message(format!(": cargo {subcommand}"));
     let output = Command::new("cargo")
@@ -253,7 +291,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
 fn main() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
 
-    let pb = &create_new_pb(6, "Running");
+    let pb = &create_new_pb(7, "Running");
 
     let _ = start(&current_dir, &Args::parse(), pb).map_err(|e| {
         pb.abandon();
