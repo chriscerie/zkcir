@@ -1,4 +1,4 @@
-use core::fmt;
+use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     env::{self},
@@ -7,66 +7,17 @@ use std::{
     path::Path,
     process::{self, Command},
 };
+use targets::TargetFramework;
 use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
 use walkdir::{DirEntry, WalkDir};
 use zkcir::{ir::CirBuilder, END_DISCRIMINATOR, START_DISCRIMINATOR};
 
-use args::{get_args, Args};
+use args::Args;
 
 mod args;
+mod targets;
 mod terminal;
-
-#[derive(Debug)]
-enum TargetFramework {
-    Plonky2,
-}
-
-impl fmt::Display for TargetFramework {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            TargetFramework::Plonky2 => write!(f, "plonky2"),
-        }
-    }
-}
-
-impl TargetFramework {
-    pub fn replace_deps(&self, path: &Path, pb: &ProgressBar) -> Result<(), String> {
-        match self {
-            TargetFramework::Plonky2 => {
-                let git_url = "https://github.com/chriscerie/plonky2.git".to_string();
-                let target_packages = [
-                    "plonky2",
-                    "plonky2_evm",
-                    "plonky2_field",
-                    "plonky2_maybe_rayon",
-                    "starky",
-                    "util",
-                ];
-
-                pb.inc_length(target_packages.len() as u64);
-
-                for package in target_packages {
-                    pb.set_message(format!(": {package}"));
-                    Command::new("cargo")
-                        .args(["add", package])
-                        .args(["--git", &git_url])
-                        .current_dir(path)
-                        .output()
-                        .map_err(|e| format!("Failed to execute `cargo add`: {}", e))?;
-
-                    pb.println(format!(
-                        "{} dependency ({package})",
-                        get_formatted_left_output("Replaced", OutputColor::Green)
-                    ));
-                    pb.inc(1);
-                }
-
-                Ok(())
-            }
-        }
-    }
-}
 
 fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String> {
     if !args.json && !args.source {
@@ -149,153 +100,143 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         pb.inc(1);
     }
 
-    target_framework.replace_deps(temp_dir.path(), pb)?;
+    target_framework.replace_deps(temp_dir.path(), pb, dependencies)?;
 
-    let mut output = None;
+    let circuit_name: String = args.name.clone().unwrap_or("circuit".to_string());
 
-    let mut circuit_name: String = "circuit".to_string();
+    let (subcommand, run_args) = match args.cargo_args.as_slice() {
+        [first, second, rest @ ..] if first == "cargo" => (second.clone(), rest.to_vec()),
+        _ => ("run".to_string(), args.cargo_args.clone()),
+    };
 
-    if let Some(example) = &args.example {
-        pb.inc_length(1);
+    pb.set_message(format!(": cargo {subcommand}"));
+    let output = Command::new("cargo")
+        .arg(&subcommand)
+        .args(&run_args)
+        .current_dir(temp_dir.path())
+        .output()
+        .map_err(|e| format!("Failed to execute `cargo {subcommand}`: {}", e))?;
 
-        circuit_name = example.clone();
+    pb.println(format!(
+        "{} cargo run {}",
+        get_formatted_left_output("Finished", OutputColor::Green),
+        &run_args.join(" ")
+    ));
+    pb.inc(1);
 
-        pb.set_message(": run".to_string());
-        output = Some(
-            Command::new("cargo")
-                .arg("run")
-                .args(["--example", &example])
-                .current_dir(temp_dir.path())
-                .output()
-                .map_err(|e| format!("Failed to execute `cargo run`: {}", e))?,
+    if !output.status.success() {
+        panic!(
+            "cargo run failed: {}",
+            String::from_utf8_lossy(&output.stderr)
         );
-
-        pb.println(format!(
-            "{} cargo run with `{example}`",
-            get_formatted_left_output("Finished", OutputColor::Green)
-        ));
-        pb.inc(1);
     }
 
-    if let Some(output) = output {
-        pb.inc_length(1);
+    pb.set_message(": cir".to_string());
 
-        if !output.status.success() {
-            panic!(
-                "cargo run failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+    let output_str = String::from_utf8(output.stdout)
+        .map_err(|e| format!("Failed to convert output to string: {}", e))?;
+
+    let start_byte_json = output_str
+        .find(START_DISCRIMINATOR)
+        .ok_or("Start discriminator of output not found")?
+        + START_DISCRIMINATOR.len();
+
+    let end_byte_json = output_str
+        .find(END_DISCRIMINATOR)
+        .ok_or("End discriminator of output not found")?;
+
+    let json_string = &output_str[start_byte_json..end_byte_json]
+        .trim()
+        // Escape sequences are parsed as actual string data
+        .replace("\\n", "\n")
+        .replace("\\\"", "\"");
+
+    let cir = CirBuilder::from_json(json_string)
+        .map_err(|e| format!("Failed to parse json CIR: {}", e))?;
+
+    pb.println(format!(
+        "{} cir output",
+        get_formatted_left_output("Parsed", OutputColor::Green)
+    ));
+    pb.inc(1);
+
+    pb.set_message(": emit".to_string());
+
+    let output_dir_path = current_dir.join("zkcir_out");
+    let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
+    let output_cir_path_source = output_dir_path.join(&circuit_name).with_extension("cir");
+
+    fs::create_dir_all(&output_dir_path)
+        .map_err(|e| format!("Failed to create output directory: {}", e))?;
+
+    if output_cir_path_json.exists() && args.json {
+        if !args.allow_dirty {
+            pb.abandon();
+            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_json.display()));
         }
 
-        pb.set_message(": cir".to_string());
+        fs::remove_file(&output_cir_path_json)
+            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+    }
 
-        let output_str = String::from_utf8(output.stdout)
-            .map_err(|e| format!("Failed to convert output to string: {}", e))?;
+    if output_cir_path_source.exists() && args.source {
+        if !args.allow_dirty {
+            pb.abandon();
+            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_source.display()));
+        }
 
-        let start_byte_json = output_str
-            .find(START_DISCRIMINATOR)
-            .ok_or("Start discriminator of output not found")?
-            + START_DISCRIMINATOR.len();
+        fs::remove_file(&output_cir_path_source)
+            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+    }
 
-        let end_byte_json = output_str
-            .find(END_DISCRIMINATOR)
-            .ok_or("End discriminator of output not found")?;
-
-        let json_string = &output_str[start_byte_json..end_byte_json]
-            .trim()
-            // Escape sequences are parsed as actual string data
-            .replace("\\n", "\n")
-            .replace("\\\"", "\"");
-
-        let cir = CirBuilder::from_json(json_string)
-            .map_err(|e| format!("Failed to parse json CIR: {}", e))?;
-
-        pb.println(format!(
-            "{} cir output",
-            get_formatted_left_output("Parsed", OutputColor::Green)
-        ));
+    if args.json {
         pb.inc(1);
 
-        pb.set_message(": emit".to_string());
+        let mut file = File::options()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&output_cir_path_json)
+            .map_err(|e| format!("Failed to create output file: {}", e))?;
 
-        let output_dir_path = current_dir.join("zkcir_out");
-        let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
-        let output_cir_path_source = output_dir_path.join(&circuit_name).with_extension("cir");
+        file.write_all(
+            json_string
+                // Escape sequences are parsed as actual string data
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .as_bytes(),
+        )
+        .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
 
-        fs::create_dir_all(&output_dir_path)
-            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+        pb.println(format!(
+            "{} json cir: {}",
+            get_formatted_left_output("Emitted", OutputColor::Green),
+            output_cir_path_json.display()
+        ));
+    }
 
-        if output_cir_path_json.exists() && args.json {
-            if !args.allow_dirty {
-                pb.abandon();
-                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_json.display()));
-            }
+    if args.source {
+        pb.inc(1);
 
-            fs::remove_file(&output_cir_path_json)
-                .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
-        }
+        let mut file = File::options()
+            .read(true)
+            .write(true)
+            .create_new(true)
+            .open(&output_cir_path_source)
+            .map_err(|e| format!("Failed to create output file: {}", e))?;
 
-        if output_cir_path_source.exists() && args.source {
-            if !args.allow_dirty {
-                pb.abandon();
-                return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_source.display()));
-            }
-
-            fs::remove_file(&output_cir_path_source)
-                .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
-        }
-
-        if args.json {
-            pb.inc(1);
-
-            let mut file = File::options()
-                .read(true)
-                .write(true)
-                .create_new(true)
-                .open(&output_cir_path_json)
-                .map_err(|e| format!("Failed to create output file: {}", e))?;
-
-            file.write_all(
-                json_string
-                    // Escape sequences are parsed as actual string data
-                    .replace("\\n", "\n")
-                    .replace("\\\"", "\"")
-                    .as_bytes(),
-            )
+        file.write_all(cir.to_code_ir().as_bytes())
             .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
 
-            pb.println(format!(
-                "{} json cir: {}",
-                get_formatted_left_output("Emitted", OutputColor::Green),
-                output_cir_path_json.display()
-            ));
-        }
-
-        if args.source {
-            pb.inc(1);
-
-            let mut file = File::options()
-                .read(true)
-                .write(true)
-                .create_new(true)
-                .open(&output_cir_path_source)
-                .map_err(|e| format!("Failed to create output file: {}", e))?;
-
-            file.write_all(cir.to_code_ir().as_bytes())
-                .map_err(|e| format!("Failed to write cir to output file: {}", e))?;
-
-            pb.println(format!(
-                "{} source cir: {}",
-                get_formatted_left_output("Emitted", OutputColor::Green),
-                output_cir_path_source.display()
-            ));
-        }
-
-        pb.set_style(ProgressStyle::default_bar().template("{msg}").unwrap());
-        pb.finish_with_message(get_formatted_left_output("Finished", OutputColor::Green));
-    } else {
-        return Err("Could not find circuit to run".to_string());
+        pb.println(format!(
+            "{} source cir: {}",
+            get_formatted_left_output("Emitted", OutputColor::Green),
+            output_cir_path_source.display()
+        ));
     }
+
+    pb.set_style(ProgressStyle::default_bar().template("{msg}").unwrap());
+    pb.finish_with_message(get_formatted_left_output("Executed", OutputColor::Green));
 
     Ok(())
 }
@@ -303,9 +244,9 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
 fn main() {
     let current_dir = env::current_dir().expect("Failed to get current directory");
 
-    let pb = &create_new_pb(4_u64, "Running");
+    let pb = &create_new_pb(6, "Running");
 
-    let _ = start(&current_dir, &get_args(), pb).map_err(|e| {
+    let _ = start(&current_dir, &Args::parse(), pb).map_err(|e| {
         pb.abandon();
 
         eprintln!(

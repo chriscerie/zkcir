@@ -3,23 +3,23 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// name of the target example circuit; must be in `/examples`
-    #[arg(short, long)]
-    pub example: Option<String>,
-
-    /// when enabled, emits ir as json; this and/or `source` must be enabled
+    /// emits ir as json; this and/or `source` must be enabled
     #[arg(long)]
     pub json: bool,
 
-    /// when enabled, emits ir as source code; this and/or `json` must be enabled
+    /// emits ir as source code; this and/or `json` must be enabled
     #[arg(long)]
     pub source: bool,
 
-    /// when enabled, replaces output file(s) when they already exist
+    /// replaces output file(s) when they already exist
     #[arg(long)]
     pub allow_dirty: bool,
-}
 
-pub fn get_args() -> Args {
-    Args::parse()
+    /// name of the output file(s) without extension. if not provided, tries to infer name from entry point
+    #[arg(long, short)]
+    pub name: Option<String>,
+
+    /// if starts with `cargo`, executes the command. otherwise forwards args to `cargo run`
+    #[arg(last = true)]
+    pub cargo_args: Vec<String>,
 }
