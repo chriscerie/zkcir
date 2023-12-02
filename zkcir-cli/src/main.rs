@@ -149,7 +149,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
 
     let default = "circuit".to_string();
 
-    let circuit_name: String = if let Some(name) = &args.name {
+    let circuit_name = if let Some(name) = &args.name {
         name
     } else if let Some(flag_index) = args
         .cargo_args
