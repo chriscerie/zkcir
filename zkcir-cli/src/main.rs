@@ -147,7 +147,22 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         _ => ("run".to_string(), args.cargo_args.clone()),
     };
 
-    let circuit_name: String = args.name.clone().unwrap_or("circuit".to_string());
+    let default = "circuit".to_string();
+
+    let circuit_name: String = if let Some(name) = &args.name {
+        name
+    } else if let Some(flag_index) = args
+        .cargo_args
+        .iter()
+        .position(|arg| ["--example", "--bin"].contains(&arg.as_str()))
+    {
+        args.cargo_args.get(flag_index + 1).unwrap_or(&default)
+    } else if let Some(flag_index) = args.cargo_args.iter().position(|arg| arg == "--package") {
+        args.cargo_args.get(flag_index + 1).unwrap_or(&default)
+    } else {
+        "circuit"
+    }
+    .to_string();
 
     let output_dir_path = current_dir.join("zkcir_out");
     let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
