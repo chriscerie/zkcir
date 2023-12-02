@@ -1,6 +1,6 @@
 # zkcir
 
-Zero knowledge circuits IR.
+Zero knowledge proof circuits IR.
 
 [![Build Status][actions-badge]][actions-url]
 
@@ -9,11 +9,17 @@ Zero knowledge circuits IR.
 
 # CLI Usage
 
-* Use rust nightly
-    * `rustup install nightly`
-    * `rustup default nightly`
-* Install CLI
-    * Run `cargo install --branch main --git https://github.com/chriscerie/zkcir zkcir-cli`
-    * Alternatively clone repo and run `cargo install --path zkcir-cli`
-* Clone https://github.com/chriscerie/plonky2-example
-* Run `zkcir --example square_root`
+- Use rust nightly
+  - `rustup install nightly`
+  - `rustup default nightly`
+- Install CLI
+  - Run `cargo install --branch main --git https://github.com/chriscerie/zkcir zkcir-cli`
+  - Alternatively clone repo and run `cargo install --path zkcir-cli`
+- Clone https://github.com/chriscerie/plonky2-example
+- Run `zkcir -- --example square_root`
+
+# Gotchas
+
+- Detecting a value was randomly generated is naive and can false positive. It stores the randomly generated values and marks any value that matches as random.
+- Frameworks are moving targets. See the forks for the actual versions of the target dependencies.
+  - [plonky2](https://github.com/chriscerie/zkcir)
