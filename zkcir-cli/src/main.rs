@@ -20,6 +20,8 @@ mod targets;
 mod terminal;
 
 fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String> {
+    let start_time = std::time::Instant::now();
+
     if !args.json && !args.source {
         pb.abandon();
         return Err("Either `--json` and/or `--source` must be enabled".to_string());
@@ -100,14 +102,41 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         pb.inc(1);
     }
 
-    target_framework.replace_deps(temp_dir.path(), pb, dependencies)?;
-
-    let circuit_name: String = args.name.clone().unwrap_or("circuit".to_string());
-
     let (subcommand, run_args) = match args.cargo_args.as_slice() {
         [first, second, rest @ ..] if first == "cargo" => (second.clone(), rest.to_vec()),
         _ => ("run".to_string(), args.cargo_args.clone()),
     };
+
+    let circuit_name: String = args.name.clone().unwrap_or("circuit".to_string());
+
+    let output_dir_path = current_dir.join("zkcir_out");
+    let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
+    let output_cir_path_source = output_dir_path.join(&circuit_name).with_extension("cir");
+
+    fs::create_dir_all(&output_dir_path)
+        .map_err(|e| format!("Failed to create output directory: {}", e))?;
+
+    if output_cir_path_json.exists() && args.json {
+        if !args.allow_dirty {
+            pb.abandon();
+            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_json.display()));
+        }
+
+        fs::remove_file(&output_cir_path_json)
+            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+    }
+
+    if output_cir_path_source.exists() && args.source {
+        if !args.allow_dirty {
+            pb.abandon();
+            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_source.display()));
+        }
+
+        fs::remove_file(&output_cir_path_source)
+            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
+    }
+
+    target_framework.replace_deps(temp_dir.path(), pb, dependencies)?;
 
     pb.set_message(format!(": cargo {subcommand}"));
     let output = Command::new("cargo")
@@ -119,7 +148,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
 
     pb.println(format!(
         "{} cargo run {}",
-        get_formatted_left_output("Finished", OutputColor::Green),
+        get_formatted_left_output("Executed", OutputColor::Green),
         &run_args.join(" ")
     ));
     pb.inc(1);
@@ -161,33 +190,6 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
     pb.inc(1);
 
     pb.set_message(": emit".to_string());
-
-    let output_dir_path = current_dir.join("zkcir_out");
-    let output_cir_path_json = output_dir_path.join(&circuit_name).with_extension("json");
-    let output_cir_path_source = output_dir_path.join(&circuit_name).with_extension("cir");
-
-    fs::create_dir_all(&output_dir_path)
-        .map_err(|e| format!("Failed to create output directory: {}", e))?;
-
-    if output_cir_path_json.exists() && args.json {
-        if !args.allow_dirty {
-            pb.abandon();
-            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_json.display()));
-        }
-
-        fs::remove_file(&output_cir_path_json)
-            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
-    }
-
-    if output_cir_path_source.exists() && args.source {
-        if !args.allow_dirty {
-            pb.abandon();
-            return Err(format!("Output file ({}) already exists. Either remove it or rerun command with `--allow-dirty`", output_cir_path_source.display()));
-        }
-
-        fs::remove_file(&output_cir_path_source)
-            .map_err(|e| format!("Failed to remove existing cir file: {}", e))?;
-    }
 
     if args.json {
         pb.inc(1);
@@ -235,8 +237,15 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         ));
     }
 
-    pb.set_style(ProgressStyle::default_bar().template("{msg}").unwrap());
-    pb.finish_with_message(get_formatted_left_output("Executed", OutputColor::Green));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(&format!(
+                "{{msg}} in {}s",
+                (start_time.elapsed().as_secs_f32() * 10.0).round() / 10.0
+            ))
+            .unwrap(),
+    );
+    pb.finish_with_message(get_formatted_left_output("Finished", OutputColor::Green));
 
     Ok(())
 }
