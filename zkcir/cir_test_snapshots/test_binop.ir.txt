@@ -4,12 +4,14 @@ CirBuilder {
     },
     stmts: [
         Local(
-            Wire(
-                Wire {
-                    row: 3,
-                    column: 2,
-                    value: None,
-                },
+            Some(
+                Wire(
+                    Wire {
+                        row: 3,
+                        column: 2,
+                        value: None,
+                    },
+                ),
             ),
             BinaryOperator {
                 lhs: BinaryOperator {

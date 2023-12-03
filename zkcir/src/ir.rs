@@ -149,7 +149,7 @@ mod tests {
             expr::{BinOp, VirtualWire, Wire},
             ident::Ident,
         },
-        test_util::test_ir_string,
+        test_util::{test_code_ir, test_ir_string},
     };
 
     use super::*;
@@ -166,24 +166,25 @@ mod tests {
 
     #[test]
     fn test_binop() {
-        test_ir_string(
-            "test_binop",
-            CirBuilder::new()
-                .add_stmt(Stmt::Local(
-                    Some(Ident::Wire(Wire::new(3, 2))),
-                    Expression::BinaryOperator {
-                        lhs: Box::new(Expression::BinaryOperator {
-                            lhs: Box::new(Wire::new(1, 2).into()),
-                            binop: BinOp::Add,
-                            rhs: Box::new(VirtualWire::new(3).into()),
-                        }),
-                        binop: BinOp::Multiply,
-                        rhs: Box::new(Wire::new(5, 6).into()),
-                    },
-                ))
-                .set_wire_value(5, 6, Value::U64(32))
-                .set_virtual_wire_value(3, Value::U64(23)),
-        );
+        let mut circuit = CirBuilder::new();
+        circuit
+            .add_stmt(Stmt::Local(
+                Some(Ident::Wire(Wire::new(3, 2))),
+                Expression::BinaryOperator {
+                    lhs: Box::new(Expression::BinaryOperator {
+                        lhs: Box::new(Wire::new(1, 2).into()),
+                        binop: BinOp::Add,
+                        rhs: Box::new(VirtualWire::new(3).into()),
+                    }),
+                    binop: BinOp::Multiply,
+                    rhs: Box::new(Wire::new(5, 6).into()),
+                },
+            ))
+            .set_wire_value(5, 6, Value::U64(32))
+            .set_virtual_wire_value(3, Value::U64(23));
+
+        test_ir_string("test_binop", &circuit);
+        test_code_ir("ir_binop", &circuit.to_code_ir());
     }
 
     #[test]
