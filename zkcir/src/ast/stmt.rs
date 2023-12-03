@@ -18,10 +18,7 @@ pub enum Stmt {
     Verify(Expression),
 
     /// Local assignment like `let x = y;`
-    ///
-    /// `Ident` should always exist, but they're usually populated later on in the circuit.
-    /// In case it doesn't, its assigned as `let _ =`
-    Local(Option<Ident>, Expression),
+    Local(Ident, Expression),
 }
 
 impl Node for Stmt {
@@ -65,15 +62,7 @@ impl Node for Stmt {
         match self {
             Stmt::Verify(stmt) => format!("verify!({});", stmt.to_code_ir()),
             Stmt::Local(ident, stmt) => {
-                format!(
-                    "let {} = {};",
-                    if let Some(ident) = ident {
-                        ident.to_code_ir()
-                    } else {
-                        "_".to_string()
-                    },
-                    stmt.to_code_ir()
-                )
+                format!("let {} = {};", ident.to_code_ir(), stmt.to_code_ir())
             }
         }
     }
@@ -92,7 +81,7 @@ mod tests {
         test_code_ir(
             "valid_stmt_source",
             &Stmt::Local(
-                Some(Ident::Wire(Wire::new(3, 2))),
+                Ident::Wire(Wire::new(3, 2)),
                 Expression::BinaryOperator {
                     lhs: Box::new(Expression::BinaryOperator {
                         lhs: Box::new(Wire::new(1, 2).into()),

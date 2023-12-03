@@ -165,7 +165,7 @@ mod tests {
         let mut circuit = CirBuilder::new();
         circuit
             .add_stmt(Stmt::Local(
-                Some(Ident::Wire(Wire::new(3, 2))),
+                Ident::Wire(Wire::new(3, 2)),
                 Expression::BinaryOperator {
                     lhs: Box::new(Expression::BinaryOperator {
                         lhs: Box::new(Wire::new(1, 2).into()),
@@ -201,7 +201,7 @@ mod tests {
             "test_omit_random",
             CirBuilder::new()
                 .add_stmt(Stmt::Local(
-                    Some("rand".into()),
+                    "rand".into(),
                     Expression::BinaryOperator {
                         lhs: Box::new(Expression::BinaryOperator {
                             lhs: Box::new(Wire::new(1, 2).into()),

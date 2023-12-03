@@ -4,10 +4,8 @@ CirBuilder {
     },
     stmts: [
         Local(
-            Some(
-                String(
-                    "rand",
-                ),
+            String(
+                "rand",
             ),
             BinaryOperator {
                 lhs: BinaryOperator {
