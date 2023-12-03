@@ -117,7 +117,6 @@ impl CirBuilder {
         ))
     }
 
-    #[must_use]
     pub fn to_code_ir(&self) -> String {
         self.stmts
             .iter()

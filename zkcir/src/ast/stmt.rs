@@ -61,7 +61,6 @@ impl Node for Stmt {
         }
     }
 
-    #[must_use]
     fn to_code_ir(&self) -> String {
         match self {
             Stmt::Verify(stmt) => format!("verify!({});", stmt.to_code_ir()),

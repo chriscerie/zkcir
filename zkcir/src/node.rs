@@ -17,5 +17,6 @@ pub trait Node {
     where
         F: FnMut(&mut Wire);
 
+    #[must_use]
     fn to_code_ir(&self) -> String;
 }
