@@ -2,42 +2,41 @@ CirBuilder {
     config: Config {
         num_wires: None,
     },
-    expressions: [
-        BinaryOperator {
-            lhs: BinaryOperator {
-                lhs: Wire(
+    stmts: [
+        Local(
+            Wire(
+                Wire {
+                    row: 3,
+                    column: 2,
+                    value: None,
+                },
+            ),
+            BinaryOperator {
+                lhs: BinaryOperator {
+                    lhs: Wire(
+                        Wire {
+                            row: 1,
+                            column: 2,
+                            value: None,
+                        },
+                    ),
+                    binop: Add,
+                    rhs: VirtualWire(
+                        VirtualWire {
+                            index: 3,
+                            value: None,
+                        },
+                    ),
+                },
+                binop: Multiply,
+                rhs: Wire(
                     Wire {
-                        row: 1,
-                        column: 2,
+                        row: 5,
+                        column: 6,
                         value: None,
                     },
                 ),
-                binop: Add,
-                rhs: VirtualWire(
-                    VirtualWire {
-                        index: 3,
-                        value: Some(
-                            U64(
-                                23,
-                            ),
-                        ),
-                    },
-                ),
-                result: None,
             },
-            binop: Multiply,
-            rhs: Wire(
-                Wire {
-                    row: 5,
-                    column: 6,
-                    value: Some(
-                        U64(
-                            32,
-                        ),
-                    ),
-                },
-            ),
-            result: None,
-        },
+        ),
     ],
 }

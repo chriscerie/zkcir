@@ -4,5 +4,5 @@ CirBuilder {
             10,
         ),
     },
-    expressions: [],
+    stmts: [],
 }
