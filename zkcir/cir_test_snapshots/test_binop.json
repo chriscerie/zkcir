@@ -27,7 +27,9 @@
                 "rhs": {
                   "VirtualWire": {
                     "index": 3,
-                    "value": null
+                    "value": {
+                      "U64": 23
+                    }
                   }
                 }
               }
@@ -37,7 +39,9 @@
               "Wire": {
                 "row": 5,
                 "column": 6,
-                "value": null
+                "value": {
+                  "U64": 32
+                }
               }
             }
           }

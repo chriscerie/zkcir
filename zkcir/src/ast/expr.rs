@@ -46,14 +46,10 @@ impl Node for Expression {
                 rhs.visit_virtual_wires(f);
             }
             Expression::VirtualWire(virtual_wire) => {
-                if let Some(value) = &mut virtual_wire.value {
-                    value.visit_virtual_wires(f);
-                }
+                virtual_wire.visit_virtual_wires(f);
             }
             Expression::Wire(wire) => {
-                if let Some(value) = &mut wire.value {
-                    value.visit_virtual_wires(f);
-                }
+                wire.visit_virtual_wires(f);
             }
             Expression::Value(_) => {}
         }
@@ -69,14 +65,10 @@ impl Node for Expression {
                 rhs.visit_wires(f);
             }
             Expression::VirtualWire(virtual_wire) => {
-                if let Some(value) = &mut virtual_wire.value {
-                    value.visit_wires(f);
-                }
+                virtual_wire.visit_wires(f);
             }
             Expression::Wire(wire) => {
-                if let Some(value) = &mut wire.value {
-                    value.visit_wires(f);
-                }
+                wire.visit_wires(f);
             }
             Expression::Value(_) => {}
         }

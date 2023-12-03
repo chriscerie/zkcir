@@ -42,9 +42,9 @@ impl Node for Stmt {
             Stmt::Verify(expr) => {
                 expr.visit_virtual_wires(f);
             }
-            Stmt::Local(ident, stmt) => {
+            Stmt::Local(ident, expr) => {
                 ident.visit_virtual_wires(f);
-                stmt.visit_virtual_wires(f);
+                expr.visit_virtual_wires(f);
             }
         }
     }
@@ -57,9 +57,9 @@ impl Node for Stmt {
             Stmt::Verify(expr) => {
                 expr.visit_wires(f);
             }
-            Stmt::Local(ident, stmt) => {
+            Stmt::Local(ident, expr) => {
                 ident.visit_wires(f);
-                stmt.visit_wires(f);
+                expr.visit_wires(f);
             }
         }
     }

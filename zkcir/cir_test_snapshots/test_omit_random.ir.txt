@@ -20,7 +20,11 @@ CirBuilder {
                     rhs: VirtualWire(
                         VirtualWire {
                             index: 3,
-                            value: None,
+                            value: Some(
+                                U64(
+                                    23,
+                                ),
+                            ),
                         },
                     ),
                 },
@@ -29,7 +33,11 @@ CirBuilder {
                     Wire {
                         row: 5,
                         column: 6,
-                        value: None,
+                        value: Some(
+                            RandomU64(
+                                32,
+                            ),
+                        ),
                     },
                 ),
             },
