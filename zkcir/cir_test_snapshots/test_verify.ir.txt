@@ -2,7 +2,7 @@ CirBuilder {
     config: Config {
         num_wires: None,
     },
-    expressions: [
+    stmts: [
         Verify(
             BinaryOperator {
                 lhs: Wire(
@@ -19,15 +19,6 @@ CirBuilder {
                         column: 6,
                         value: None,
                     },
-                ),
-                result: Some(
-                    Wire(
-                        Wire {
-                            row: 10,
-                            column: 11,
-                            value: None,
-                        },
-                    ),
                 ),
             },
         ),

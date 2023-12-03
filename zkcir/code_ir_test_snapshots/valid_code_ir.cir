@@ -1,1 +1,0 @@
-((wire!(row: 1, column: 2, value: 5u64) + virtual_wire!(index: 3)) -> 23u64) * wire!(row: 5, column: 6)

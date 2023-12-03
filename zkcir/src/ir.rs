@@ -8,7 +8,9 @@ use serde::Serialize;
 use serde_json;
 
 use crate::ast::Expression;
+use crate::ast::Stmt;
 use crate::ast::Value;
+use crate::node::Node;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
@@ -20,7 +22,7 @@ pub struct Config {
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub struct CirBuilder {
     pub config: Config,
-    pub expressions: Vec<Expression>,
+    pub stmts: Vec<Stmt>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -34,7 +36,7 @@ impl CirBuilder {
     pub fn new() -> Self {
         CirBuilder {
             config: Config { num_wires: None },
-            expressions: Vec::new(),
+            stmts: Vec::new(),
         }
     }
 
@@ -43,14 +45,14 @@ impl CirBuilder {
         self
     }
 
-    pub fn add_expression(&mut self, x: Expression) -> &mut Self {
-        self.expressions.push(x);
+    pub fn add_stmt(&mut self, x: Stmt) -> &mut Self {
+        self.stmts.push(x);
         self
     }
 
     pub fn set_virtual_wire_value(&mut self, index: usize, value: Value) -> &mut Self {
-        for expression in &mut self.expressions {
-            expression.visit_virtual_wires(&mut |virtual_wire| {
+        for stmt in &mut self.stmts {
+            stmt.visit_virtual_wires(&mut |virtual_wire| {
                 if virtual_wire.index == index {
                     virtual_wire.value = Some(value);
                 }
@@ -60,8 +62,8 @@ impl CirBuilder {
     }
 
     pub fn set_wire_value(&mut self, row: usize, column: usize, value: Value) -> &mut Self {
-        for expression in &mut self.expressions {
-            expression.visit_wires(&mut |wire| {
+        for stmt in &mut self.stmts {
+            stmt.visit_wires(&mut |wire| {
                 if wire.row == row && wire.column == column {
                     wire.value = Some(value);
                 }
@@ -85,7 +87,7 @@ impl CirBuilder {
     pub fn to_string_omit_random(&self) -> Result<String, &'static str> {
         let mut new = self.clone();
 
-        for expression in &mut new.expressions {
+        for expression in &mut new.stmts {
             expression.visit_wires(&mut |wire| {
                 if let Some(Value::RandomU64(_)) = wire.value {
                     wire.value = Some(Value::Random);
@@ -115,11 +117,10 @@ impl CirBuilder {
         ))
     }
 
-    #[must_use]
     pub fn to_code_ir(&self) -> String {
-        self.expressions
+        self.stmts
             .iter()
-            .map(Expression::to_code_ir)
+            .map(Stmt::to_code_ir)
             .collect::<Vec<_>>()
             .join("\n\n")
     }
@@ -143,8 +144,8 @@ mod tests {
     use alloc::boxed::Box;
 
     use crate::{
-        ast::{BinOp, VirtualWire, Wire},
-        test_util::test_ir_string,
+        ast::{BinOp, Ident, VirtualWire, Wire},
+        test_util::{test_code_ir, test_ir_string},
     };
 
     use super::*;
@@ -161,37 +162,36 @@ mod tests {
 
     #[test]
     fn test_binop() {
-        test_ir_string(
-            "test_binop",
-            CirBuilder::new()
-                .add_expression(Expression::BinaryOperator {
+        let mut circuit = CirBuilder::new();
+        circuit
+            .add_stmt(Stmt::Local(
+                Some(Ident::Wire(Wire::new(3, 2))),
+                Expression::BinaryOperator {
                     lhs: Box::new(Expression::BinaryOperator {
                         lhs: Box::new(Wire::new(1, 2).into()),
                         binop: BinOp::Add,
                         rhs: Box::new(VirtualWire::new(3).into()),
-                        result: None,
                     }),
                     binop: BinOp::Multiply,
                     rhs: Box::new(Wire::new(5, 6).into()),
-                    result: None,
-                })
-                .set_wire_value(5, 6, Value::U64(32))
-                .set_virtual_wire_value(3, Value::U64(23)),
-        );
+                },
+            ))
+            .set_wire_value(5, 6, Value::U64(32))
+            .set_virtual_wire_value(3, Value::U64(23));
+
+        test_ir_string("test_binop", &circuit);
+        test_code_ir("ir_binop", &circuit.to_code_ir());
     }
 
     #[test]
     fn test_verify() {
         test_ir_string(
             "test_verify",
-            CirBuilder::new().add_expression(Expression::Verify(Box::new(
-                Expression::BinaryOperator {
-                    lhs: Box::new(Wire::new(5, 6).into()),
-                    binop: BinOp::Equal,
-                    rhs: Box::new(Wire::new(5, 6).into()),
-                    result: Some(Box::new(Wire::new(10, 11).into())),
-                },
-            ))),
+            CirBuilder::new().add_stmt(Stmt::Verify(Expression::BinaryOperator {
+                lhs: Box::new(Wire::new(5, 6).into()),
+                binop: BinOp::Equal,
+                rhs: Box::new(Wire::new(5, 6).into()),
+            })),
         );
     }
 
@@ -200,17 +200,18 @@ mod tests {
         test_ir_string(
             "test_omit_random",
             CirBuilder::new()
-                .add_expression(Expression::BinaryOperator {
-                    lhs: Box::new(Expression::BinaryOperator {
-                        lhs: Box::new(Wire::new(1, 2).into()),
-                        binop: BinOp::Add,
-                        rhs: Box::new(VirtualWire::new(3).into()),
-                        result: None,
-                    }),
-                    binop: BinOp::Multiply,
-                    rhs: Box::new(Wire::new(5, 6).into()),
-                    result: None,
-                })
+                .add_stmt(Stmt::Local(
+                    Some("rand".into()),
+                    Expression::BinaryOperator {
+                        lhs: Box::new(Expression::BinaryOperator {
+                            lhs: Box::new(Wire::new(1, 2).into()),
+                            binop: BinOp::Add,
+                            rhs: Box::new(VirtualWire::new(3).into()),
+                        }),
+                        binop: BinOp::Multiply,
+                        rhs: Box::new(Wire::new(5, 6).into()),
+                    },
+                ))
                 .set_wire_value(5, 6, Value::RandomU64(32))
                 .set_virtual_wire_value(3, Value::U64(23)),
         );

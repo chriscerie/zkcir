@@ -2,7 +2,7 @@
   "config": {
     "num_wires": null
   },
-  "expressions": [
+  "stmts": [
     {
       "Verify": {
         "BinaryOperator": {
@@ -18,13 +18,6 @@
             "Wire": {
               "row": 5,
               "column": 6,
-              "value": null
-            }
-          },
-          "result": {
-            "Wire": {
-              "row": 10,
-              "column": 11,
               "value": null
             }
           }

@@ -3,9 +3,9 @@
 #![allow(clippy::struct_excessive_bools)]
 #![no_std]
 
-pub mod ir;
-
 pub mod ast;
+pub mod ir;
+pub mod node;
 
 #[cfg(test)]
 mod test_util;
