@@ -7,9 +7,9 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json;
 
-use crate::ast::expr::Expression;
-use crate::ast::expr::Value;
-use crate::ast::stmt::Stmt;
+use crate::ast::Expression;
+use crate::ast::Stmt;
+use crate::ast::Value;
 use crate::node::Node;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
@@ -144,10 +144,7 @@ mod tests {
     use alloc::boxed::Box;
 
     use crate::{
-        ast::{
-            expr::{BinOp, VirtualWire, Wire},
-            ident::Ident,
-        },
+        ast::{BinOp, Ident, VirtualWire, Wire},
         test_util::{test_code_ir, test_ir_string},
     };
 

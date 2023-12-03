@@ -2,7 +2,7 @@ extern crate alloc;
 
 use alloc::string::String;
 
-use crate::ast::expr::{Value, VirtualWire, Wire};
+use crate::ast::{Value, VirtualWire, Wire};
 
 pub trait Node {
     fn visit_values<F>(&mut self, f: &mut F)
