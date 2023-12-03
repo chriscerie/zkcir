@@ -1,9 +1,6 @@
 extern crate alloc;
 
-use alloc::{
-    format,
-    string::{String, ToString},
-};
+use alloc::{format, string::String};
 use serde::{Deserialize, Serialize};
 
 use crate::node::Node;
@@ -30,7 +27,10 @@ impl Node for Stmt {
             Stmt::Verify(expr) => {
                 expr.visit_values(f);
             }
-            Stmt::Local(_ident, stmt) => stmt.visit_values(f),
+            Stmt::Local(ident, stmt) => {
+                ident.visit_values(f);
+                stmt.visit_values(f);
+            }
         }
     }
 
@@ -42,7 +42,10 @@ impl Node for Stmt {
             Stmt::Verify(expr) => {
                 expr.visit_virtual_wires(f);
             }
-            Stmt::Local(_ident, stmt) => stmt.visit_virtual_wires(f),
+            Stmt::Local(ident, stmt) => {
+                ident.visit_virtual_wires(f);
+                stmt.visit_virtual_wires(f);
+            }
         }
     }
 
@@ -54,7 +57,10 @@ impl Node for Stmt {
             Stmt::Verify(expr) => {
                 expr.visit_wires(f);
             }
-            Stmt::Local(_ident, stmt) => stmt.visit_wires(f),
+            Stmt::Local(ident, stmt) => {
+                ident.visit_wires(f);
+                stmt.visit_wires(f);
+            }
         }
     }
 

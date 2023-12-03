@@ -24,16 +24,22 @@ impl Node for Ident {
     {
     }
 
-    fn visit_virtual_wires<F>(&mut self, _f: &mut F)
+    fn visit_virtual_wires<F>(&mut self, f: &mut F)
     where
         F: FnMut(&mut VirtualWire),
     {
+        if let Ident::VirtualWire(virtual_wire) = self {
+            virtual_wire.visit_virtual_wires(f);
+        }
     }
 
-    fn visit_wires<F>(&mut self, _f: &mut F)
+    fn visit_wires<F>(&mut self, f: &mut F)
     where
         F: FnMut(&mut Wire),
     {
+        if let Ident::Wire(wire) = self {
+            wire.visit_wires(f);
+        }
     }
 
     fn to_code_ir(&self) -> String {
