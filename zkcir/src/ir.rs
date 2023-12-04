@@ -96,11 +96,11 @@ pub struct Config {
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub struct CirBuilder {
-    config: Config,
-    stmts: Vec<Stmt>,
+    pub config: Config,
+    pub stmts: Vec<Stmt>,
 
-    public_wire_inputs: Vec<Wire>,
-    public_virtual_wire_inputs: Vec<VirtualWire>,
+    pub public_wire_inputs: Vec<Wire>,
+    pub public_virtual_wire_inputs: Vec<VirtualWire>,
 }
 
 #[derive(Serialize, Clone, Debug)]
