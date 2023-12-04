@@ -9,38 +9,46 @@ CirBuilder {
             ),
             BinaryOperator {
                 lhs: BinaryOperator {
-                    lhs: Wire(
-                        Wire {
-                            row: 1,
-                            column: 2,
-                            value: None,
-                        },
+                    lhs: Ident(
+                        Wire(
+                            Wire {
+                                row: 1,
+                                column: 2,
+                                value: None,
+                            },
+                        ),
                     ),
                     binop: Add,
-                    rhs: VirtualWire(
-                        VirtualWire {
-                            index: 3,
+                    rhs: Ident(
+                        VirtualWire(
+                            VirtualWire {
+                                index: 3,
+                                value: Some(
+                                    U64(
+                                        23,
+                                    ),
+                                ),
+                            },
+                        ),
+                    ),
+                },
+                binop: Multiply,
+                rhs: Ident(
+                    Wire(
+                        Wire {
+                            row: 5,
+                            column: 6,
                             value: Some(
-                                U64(
-                                    23,
+                                RandomU64(
+                                    32,
                                 ),
                             ),
                         },
                     ),
-                },
-                binop: Multiply,
-                rhs: Wire(
-                    Wire {
-                        row: 5,
-                        column: 6,
-                        value: Some(
-                            RandomU64(
-                                32,
-                            ),
-                        ),
-                    },
                 ),
             },
         ),
     ],
+    public_wire_inputs: [],
+    public_virtual_wire_inputs: [],
 }

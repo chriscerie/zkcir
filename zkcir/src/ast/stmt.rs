@@ -64,6 +64,36 @@ impl Node for Stmt {
         }
     }
 
+    fn visit_expressions_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Expression) -> Expression,
+    {
+        match self {
+            Stmt::Verify(expr) => {
+                *expr = f(expr);
+            }
+            Stmt::Local(ident, expr) => {
+                *expr = f(expr);
+                ident.visit_expressions_mut(f);
+            }
+        }
+    }
+
+    fn visit_idents_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+        match self {
+            Stmt::Verify(expr) => {
+                expr.visit_idents_mut(f);
+            }
+            Stmt::Local(ident, expr) => {
+                *ident = f(ident);
+                expr.visit_idents_mut(f);
+            }
+        }
+    }
+
     fn to_code_ir(&self) -> String {
         match self {
             Stmt::Verify(stmt) => format!("verify!({});", stmt.to_code_ir()),

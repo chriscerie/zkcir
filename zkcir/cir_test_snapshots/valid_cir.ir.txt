@@ -5,4 +5,6 @@ CirBuilder {
         ),
     },
     stmts: [],
+    public_wire_inputs: [],
+    public_virtual_wire_inputs: [],
 }

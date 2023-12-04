@@ -12,7 +12,7 @@ use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
 use toml::Value;
 use walkdir::{DirEntry, WalkDir};
-use zkcir::{ir::CirBuilder, END_DISCRIMINATOR, START_DISCRIMINATOR};
+use zkcir::{ir::Cir, END_DISCRIMINATOR, START_DISCRIMINATOR};
 
 use args::Args;
 
@@ -233,8 +233,8 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         .replace("\\n", "\n")
         .replace("\\\"", "\"");
 
-    let cir = CirBuilder::from_json(json_string)
-        .map_err(|e| format!("Failed to parse json CIR: {}", e))?;
+    let cir =
+        Cir::from_json(json_string).map_err(|e| format!("Failed to parse json CIR: {}", e))?;
 
     pb.println(format!(
         "{} cir output",

@@ -7,22 +7,28 @@
       "Verify": {
         "BinaryOperator": {
           "lhs": {
-            "Wire": {
-              "row": 5,
-              "column": 6,
-              "value": null
+            "Ident": {
+              "Wire": {
+                "row": 5,
+                "column": 6,
+                "value": null
+              }
             }
           },
           "binop": "Equal",
           "rhs": {
-            "Wire": {
-              "row": 5,
-              "column": 6,
-              "value": null
+            "Ident": {
+              "Wire": {
+                "row": 5,
+                "column": 6,
+                "value": null
+              }
             }
           }
         }
       }
     }
-  ]
+  ],
+  "public_wire_inputs": [],
+  "public_virtual_wire_inputs": []
 }

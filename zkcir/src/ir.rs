@@ -8,70 +8,26 @@ use serde::Serialize;
 use serde_json;
 
 use crate::ast::Expression;
+use crate::ast::Ident;
 use crate::ast::Stmt;
 use crate::ast::Value;
+use crate::ast::VirtualWire;
+use crate::ast::Wire;
 use crate::node::Node;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
 
-#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
-pub struct Config {
-    num_wires: Option<u64>,
-}
-
+/// Built circuit. This should be built using `CirBuilder` instead of creating this directly.
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
-pub struct CirBuilder {
+pub struct Cir {
     pub config: Config,
     pub stmts: Vec<Stmt>,
+
+    pub public_wire_inputs: Vec<Wire>,
+    pub public_virtual_wire_inputs: Vec<VirtualWire>,
 }
 
-#[derive(Serialize, Clone, Debug)]
-pub struct Operation {
-    name: String,
-    args: Vec<Expression>,
-}
-
-impl CirBuilder {
-    #[must_use]
-    pub fn new() -> Self {
-        CirBuilder {
-            config: Config { num_wires: None },
-            stmts: Vec::new(),
-        }
-    }
-
-    pub fn num_wires(&mut self, num: u64) -> &mut Self {
-        self.config.num_wires = Some(num);
-        self
-    }
-
-    pub fn add_stmt(&mut self, x: Stmt) -> &mut Self {
-        self.stmts.push(x);
-        self
-    }
-
-    pub fn set_virtual_wire_value(&mut self, index: usize, value: Value) -> &mut Self {
-        for stmt in &mut self.stmts {
-            stmt.visit_virtual_wires(&mut |virtual_wire| {
-                if virtual_wire.index == index {
-                    virtual_wire.value = Some(value);
-                }
-            });
-        }
-        self
-    }
-
-    pub fn set_wire_value(&mut self, row: usize, column: usize, value: Value) -> &mut Self {
-        for stmt in &mut self.stmts {
-            stmt.visit_wires(&mut |wire| {
-                if wire.row == row && wire.column == column {
-                    wire.value = Some(value);
-                }
-            });
-        }
-        self
-    }
-
+impl Cir {
     /// # Errors
     ///
     /// Errors from `serde_json::to_string_pretty`
@@ -133,6 +89,147 @@ impl CirBuilder {
     }
 }
 
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct Config {
+    num_wires: Option<u64>,
+}
+
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
+pub struct CirBuilder {
+    config: Config,
+    stmts: Vec<Stmt>,
+
+    public_wire_inputs: Vec<Wire>,
+    public_virtual_wire_inputs: Vec<VirtualWire>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct Operation {
+    name: String,
+    args: Vec<Expression>,
+}
+
+impl CirBuilder {
+    #[must_use]
+    pub fn new() -> Self {
+        CirBuilder {
+            config: Config { num_wires: None },
+            stmts: Vec::new(),
+            public_wire_inputs: Vec::new(),
+            public_virtual_wire_inputs: Vec::new(),
+        }
+    }
+
+    pub fn num_wires(&mut self, num: u64) -> &mut Self {
+        self.config.num_wires = Some(num);
+        self
+    }
+
+    pub fn add_stmt(&mut self, x: Stmt) -> &mut Self {
+        self.stmts.push(x);
+        self
+    }
+
+    pub fn set_virtual_wire_value(&mut self, index: usize, value: Value) -> &mut Self {
+        for stmt in &mut self.stmts {
+            stmt.visit_virtual_wires(&mut |virtual_wire| {
+                if virtual_wire.index == index {
+                    virtual_wire.value = Some(value);
+                }
+            });
+        }
+        self
+    }
+
+    pub fn set_wire_value(&mut self, row: usize, column: usize, value: Value) -> &mut Self {
+        for stmt in &mut self.stmts {
+            stmt.visit_wires(&mut |wire| {
+                if wire.row == row && wire.column == column {
+                    wire.value = Some(value);
+                }
+            });
+        }
+        self
+    }
+
+    pub fn register_public_wire_input(&mut self, wire: Wire) -> &mut Self {
+        self.public_wire_inputs.push(wire);
+        self
+    }
+
+    pub fn register_public_virtual_wire_input(&mut self, wire: VirtualWire) -> &mut Self {
+        self.public_virtual_wire_inputs.push(wire);
+        self
+    }
+
+    #[must_use]
+    pub fn build(&self) -> Cir {
+        let mut processed_stmts = self.stmts.clone();
+
+        // Count backwards so the first one is the last to be inserted to the front
+        let mut num_public_input =
+            self.public_wire_inputs.len() + self.public_virtual_wire_inputs.len();
+
+        for input in self.public_wire_inputs.iter().rev() {
+            // Replace all references to this wire with the new ident
+            for stmt in &mut processed_stmts {
+                stmt.visit_idents_mut(&mut |ident| {
+                    if let Ident::Wire(wire) = ident {
+                        if wire.row == input.row && wire.column == input.column {
+                            return Ident::String(format!("public_input_{num_public_input}"));
+                        }
+                        return Ident::Wire(*wire);
+                    }
+                    ident.clone()
+                });
+            }
+
+            processed_stmts.insert(
+                0,
+                Stmt::Local(
+                    Ident::String(format!("public_input_{num_public_input}")),
+                    (*input).into(),
+                ),
+            );
+
+            num_public_input -= 1;
+        }
+
+        for input in self.public_virtual_wire_inputs.iter().rev() {
+            // Replace all references to this wire with the new ident
+            for stmt in &mut processed_stmts {
+                stmt.visit_idents_mut(&mut |ident| {
+                    if let Ident::VirtualWire(virtual_wire) = ident {
+                        if virtual_wire.index == input.index {
+                            return Ident::String(format!("public_input_{num_public_input}"));
+                        }
+                        return Ident::VirtualWire(*virtual_wire);
+                    }
+                    ident.clone()
+                });
+            }
+
+            processed_stmts.insert(
+                0,
+                Stmt::Local(
+                    Ident::String(format!("public_input_{num_public_input}")),
+                    (*input).into(),
+                ),
+            );
+
+            num_public_input -= 1;
+        }
+
+        Cir {
+            config: self.config,
+            stmts: processed_stmts,
+
+            public_wire_inputs: self.public_wire_inputs.clone(),
+            public_virtual_wire_inputs: self.public_virtual_wire_inputs.clone(),
+        }
+    }
+}
+
 impl Default for CirBuilder {
     fn default() -> Self {
         Self::new()
@@ -180,7 +277,7 @@ mod tests {
             .set_virtual_wire_value(3, Value::U64(23));
 
         test_ir_string("test_binop", &circuit);
-        test_code_ir("ir_binop", &circuit.to_code_ir());
+        test_code_ir("ir_binop", &circuit.build().to_code_ir());
     }
 
     #[test]
@@ -214,6 +311,30 @@ mod tests {
                 ))
                 .set_wire_value(5, 6, Value::RandomU64(32))
                 .set_virtual_wire_value(3, Value::U64(23)),
+        );
+    }
+
+    #[test]
+    fn test_public_input() {
+        test_code_ir(
+            "ir_public_input",
+            &CirBuilder::new()
+                .add_stmt(Stmt::Local(
+                    "num".into(),
+                    Expression::BinaryOperator {
+                        lhs: Box::new(Expression::BinaryOperator {
+                            lhs: Box::new(Wire::new(1, 2).into()),
+                            binop: BinOp::Add,
+                            rhs: Box::new(VirtualWire::new(3).into()),
+                        }),
+                        binop: BinOp::Multiply,
+                        rhs: Box::new(Wire::new(5, 6).into()),
+                    },
+                ))
+                .register_public_wire_input(Wire::new(1, 2))
+                .register_public_virtual_wire_input(VirtualWire::new(3))
+                .build()
+                .to_code_ir(),
         );
     }
 }

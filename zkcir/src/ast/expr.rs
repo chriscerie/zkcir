@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::node::Node;
 
+use super::Ident;
+
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub enum Expression {
     BinaryOperator {
@@ -13,9 +15,8 @@ pub enum Expression {
         binop: BinOp,
         rhs: Box<Expression>,
     },
+    Ident(Ident),
     Value(Value),
-    VirtualWire(VirtualWire),
-    Wire(Wire),
 }
 
 impl Node for Expression {
@@ -29,10 +30,7 @@ impl Node for Expression {
                 rhs.visit_values(f);
             }
             Expression::Value(value) => value.visit_values(f),
-            Expression::VirtualWire(virtual_wire) => {
-                virtual_wire.visit_values(f);
-            }
-            Expression::Wire(_) => {}
+            Expression::Ident(ident) => ident.visit_values(f),
         }
     }
 
@@ -45,12 +43,7 @@ impl Node for Expression {
                 lhs.visit_virtual_wires(f);
                 rhs.visit_virtual_wires(f);
             }
-            Expression::VirtualWire(virtual_wire) => {
-                virtual_wire.visit_virtual_wires(f);
-            }
-            Expression::Wire(wire) => {
-                wire.visit_virtual_wires(f);
-            }
+            Expression::Ident(ident) => ident.visit_virtual_wires(f),
             Expression::Value(_) => {}
         }
     }
@@ -64,13 +57,40 @@ impl Node for Expression {
                 lhs.visit_wires(f);
                 rhs.visit_wires(f);
             }
-            Expression::VirtualWire(virtual_wire) => {
-                virtual_wire.visit_wires(f);
-            }
-            Expression::Wire(wire) => {
-                wire.visit_wires(f);
-            }
+            Expression::Ident(ident) => ident.visit_wires(f),
             Expression::Value(_) => {}
+        }
+    }
+
+    fn visit_expressions_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Expression) -> Expression,
+    {
+        match self {
+            Expression::BinaryOperator { lhs, rhs, .. } => {
+                *lhs = Box::new(f(lhs));
+                *rhs = Box::new(f(rhs));
+            }
+            Expression::Ident(ident) => ident.visit_expressions_mut(f),
+            Expression::Value(value) => {
+                value.visit_expressions_mut(f);
+            }
+        }
+    }
+
+    fn visit_idents_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+        match self {
+            Expression::BinaryOperator { lhs, rhs, .. } => {
+                lhs.visit_idents_mut(f);
+                rhs.visit_idents_mut(f);
+            }
+            Expression::Ident(ident) => *ident = f(ident),
+            Expression::Value(value) => {
+                value.visit_idents_mut(f);
+            }
         }
     }
 
@@ -92,8 +112,7 @@ impl Node for Expression {
                 format!("{lhs_str} {binop} {rhs_str}")
             }
             Expression::Value(value) => value.to_code_ir(),
-            Expression::VirtualWire(virtual_wire) => virtual_wire.to_code_ir(),
-            Expression::Wire(wire) => wire.to_code_ir(),
+            Expression::Ident(ident) => ident.to_code_ir(),
         }
     }
 }
@@ -164,6 +183,18 @@ impl Node for Value {
     {
     }
 
+    fn visit_expressions_mut<F>(&mut self, _f: &mut F)
+    where
+        F: FnMut(&mut Expression) -> Expression,
+    {
+    }
+
+    fn visit_idents_mut<F>(&mut self, _f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+    }
+
     fn to_code_ir(&self) -> alloc::string::String {
         self.to_string()
     }
@@ -206,6 +237,24 @@ impl Node for VirtualWire {
     {
     }
 
+    fn visit_expressions_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Expression) -> Expression,
+    {
+        if let Some(value) = &mut self.value {
+            value.visit_expressions_mut(f);
+        }
+    }
+
+    fn visit_idents_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+        if let Some(value) = &mut self.value {
+            value.visit_idents_mut(f);
+        }
+    }
+
     fn to_code_ir(&self) -> alloc::string::String {
         if let Some(value) = &self.value {
             format!(
@@ -221,7 +270,7 @@ impl Node for VirtualWire {
 
 impl From<VirtualWire> for Expression {
     fn from(val: VirtualWire) -> Self {
-        Expression::VirtualWire(val)
+        Expression::Ident(Ident::VirtualWire(val))
     }
 }
 
@@ -267,6 +316,24 @@ impl Node for Wire {
         f(self);
     }
 
+    fn visit_expressions_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Expression) -> Expression,
+    {
+        if let Some(value) = &mut self.value {
+            value.visit_expressions_mut(f);
+        }
+    }
+
+    fn visit_idents_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+        if let Some(value) = &mut self.value {
+            value.visit_idents_mut(f);
+        }
+    }
+
     fn to_code_ir(&self) -> alloc::string::String {
         if let Some(value) = &self.value {
             format!(
@@ -283,7 +350,7 @@ impl Node for Wire {
 
 impl From<Wire> for Expression {
     fn from(val: Wire) -> Self {
-        Expression::Wire(val)
+        Expression::Ident(Ident::Wire(val))
     }
 }
 

@@ -5,22 +5,28 @@ CirBuilder {
     stmts: [
         Verify(
             BinaryOperator {
-                lhs: Wire(
-                    Wire {
-                        row: 5,
-                        column: 6,
-                        value: None,
-                    },
+                lhs: Ident(
+                    Wire(
+                        Wire {
+                            row: 5,
+                            column: 6,
+                            value: None,
+                        },
+                    ),
                 ),
                 binop: Equal,
-                rhs: Wire(
-                    Wire {
-                        row: 5,
-                        column: 6,
-                        value: None,
-                    },
+                rhs: Ident(
+                    Wire(
+                        Wire {
+                            row: 5,
+                            column: 6,
+                            value: None,
+                        },
+                    ),
                 ),
             },
         ),
     ],
+    public_wire_inputs: [],
+    public_virtual_wire_inputs: [],
 }

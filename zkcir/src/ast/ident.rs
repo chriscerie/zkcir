@@ -42,6 +42,22 @@ impl Node for Ident {
         }
     }
 
+    fn visit_expressions_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut super::Expression) -> super::Expression,
+    {
+        if let Ident::Wire(wire) = self {
+            wire.visit_expressions_mut(f);
+        }
+    }
+
+    fn visit_idents_mut<F>(&mut self, f: &mut F)
+    where
+        F: FnMut(&mut Ident) -> Ident,
+    {
+        *self = f(self);
+    }
+
     fn to_code_ir(&self) -> String {
         match self {
             Ident::String(ident) => ident.clone(),

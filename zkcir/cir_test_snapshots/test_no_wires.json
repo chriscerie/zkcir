@@ -2,5 +2,7 @@
   "config": {
     "num_wires": null
   },
-  "stmts": []
+  "stmts": [],
+  "public_wire_inputs": [],
+  "public_virtual_wire_inputs": []
 }

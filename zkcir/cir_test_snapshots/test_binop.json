@@ -17,18 +17,22 @@
             "lhs": {
               "BinaryOperator": {
                 "lhs": {
-                  "Wire": {
-                    "row": 1,
-                    "column": 2,
-                    "value": null
+                  "Ident": {
+                    "Wire": {
+                      "row": 1,
+                      "column": 2,
+                      "value": null
+                    }
                   }
                 },
                 "binop": "Add",
                 "rhs": {
-                  "VirtualWire": {
-                    "index": 3,
-                    "value": {
-                      "U64": 23
+                  "Ident": {
+                    "VirtualWire": {
+                      "index": 3,
+                      "value": {
+                        "U64": 23
+                      }
                     }
                   }
                 }
@@ -36,11 +40,13 @@
             },
             "binop": "Multiply",
             "rhs": {
-              "Wire": {
-                "row": 5,
-                "column": 6,
-                "value": {
-                  "U64": 32
+              "Ident": {
+                "Wire": {
+                  "row": 5,
+                  "column": 6,
+                  "value": {
+                    "U64": 32
+                  }
                 }
               }
             }
@@ -48,5 +54,7 @@
         }
       ]
     }
-  ]
+  ],
+  "public_wire_inputs": [],
+  "public_virtual_wire_inputs": []
 }
