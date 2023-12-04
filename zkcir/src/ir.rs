@@ -138,6 +138,13 @@ impl CirBuilder {
                 }
             });
         }
+
+        for input in &mut self.public_virtual_wire_inputs {
+            if input.index == index {
+                input.value = Some(value);
+            }
+        }
+
         self
     }
 
@@ -149,6 +156,13 @@ impl CirBuilder {
                 }
             });
         }
+
+        for input in &mut self.public_wire_inputs {
+            if input.row == row && input.column == column {
+                input.value = Some(value);
+            }
+        }
+
         self
     }
 
