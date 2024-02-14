@@ -23,3 +23,9 @@ Zero knowledge proof circuits IR.
 - Detecting a value was randomly generated is naive and can false positive. It stores the randomly generated values and marks any value that matches as random.
 - Frameworks are moving targets. See the forks for the actual versions of the target dependencies.
   - [plonky2](https://github.com/chriscerie/zkcir)
+
+# AWS Deployment
+* Add `0 issue "amazon.com"` CAA to domain record
+* Deploy CDK
+  * While deploying, approve certificate request
+* Get application load balancer's DNS name from console and add as CNAME record

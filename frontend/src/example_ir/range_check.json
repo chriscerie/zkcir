@@ -1,0 +1,60 @@
+{
+  "config": {
+    "num_wires": 135
+  },
+  "stmts": [
+    {
+      "Local": [
+        {
+          "String": "public_input_1"
+        },
+        {
+          "Ident": {
+            "VirtualWire": {
+              "index": 0,
+              "value": {
+                "U64": 42
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "Verify": {
+        "BinaryOperator": {
+          "lhs": {
+            "Ident": {
+              "String": "public_input_1"
+            }
+          },
+          "binop": "LessThan",
+          "rhs": {
+            "BinaryOperator": {
+              "lhs": {
+                "Value": {
+                  "U64": 2
+                }
+              },
+              "binop": "Exponent",
+              "rhs": {
+                "Value": {
+                  "U64": 6
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "public_wire_inputs": [],
+  "public_virtual_wire_inputs": [
+    {
+      "index": 0,
+      "value": {
+        "U64": 42
+      }
+    }
+  ]
+}

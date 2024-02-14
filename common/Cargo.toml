@@ -1,0 +1,10 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = "1.0.196"
+toml = "0.8.10"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
