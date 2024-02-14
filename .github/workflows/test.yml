@@ -17,7 +17,18 @@ jobs:
         working-directory: ./zkcir
         run: cargo test
 
-  lint:
+  lint-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: yarn install
+        working-directory: ./frontend
+      - name: Lint frontend
+        run: yarn lint
+        working-directory: ./frontend
+
+  lint-rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

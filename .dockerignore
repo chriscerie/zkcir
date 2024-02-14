@@ -1,0 +1,8 @@
+target
+debug
+cdk
+
+frontend/node_modules
+
+# Backup files from rustfmt
+**/*.rs.bk
