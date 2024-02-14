@@ -1,7 +1,5 @@
 # zkcir
 
-Zero knowledge proof circuits intermediate representation.
-
 [![Build Status][actions-badge]][actions-url]
 
 [actions-badge]: https://github.com/chriscerie/zkcir/actions/workflows/test.yml/badge.svg
@@ -40,3 +38,15 @@ We offer a self-hosted web app solution. To use, first deploy the app with AWS C
 * Get application load balancer's DNS name from console and add as CNAME record
 
 Internally fargate will compile the rust project with patched dependencies and store the executable in S3. It then sends the presigned url to lambda without access to other services and outbound internet to act as a sandboxed environment. Lambda then gets the executable and runs it, returning the resulting IR.
+
+# File Structure
+
+| Folder                               | Description                                                        | Role                |
+| ------------------------------------ | ------------------------------------------------------------------ | ------------------- |
+| `cdk`                                | Infra-as-code with AWS CDK                                         | Online compiler     |
+| `common`                             | Internal shared code                                               | All                 |
+| `compile_lambda`                     | Sandboxed AWS lambda function to execute circuit code              | Online compiler     |
+| `core_ecs`                           | User-facing web backend                                            | Online compiler     |
+| `frontend`                           | User-facing web frontend                                           | Online compiler     |
+| `zkcir`                              | Rust library to construct AST of the IR                            | Library             |
+| `zkcir-cli`                          | CLI to compile circuits to IR locally                              | CLI                 |
