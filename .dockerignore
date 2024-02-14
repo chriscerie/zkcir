@@ -1,6 +1,7 @@
 target
 debug
 cdk
+zkcir-cli
 
 frontend/node_modules
 
