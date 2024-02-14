@@ -5,11 +5,9 @@
 [actions-badge]: https://github.com/chriscerie/zkcir/actions/workflows/test.yml/badge.svg
 [actions-url]: https://github.com/chriscerie/zkcir/actions?query=workflow%3ACI+branch%3Amain
 
-# Motivation
-
 Zero knowledge proofs are implemented in various frameworks, each with its own unique syntax and features. This leads to expensive context switching for cryptographic security analysts. This IR enables security analysis over a framework-agnostic environment.
 
-# CLI Usage
+## CLI Usage
 
 - Use rust nightly
   - `rustup install nightly`
@@ -21,13 +19,13 @@ Zero knowledge proofs are implemented in various frameworks, each with its own u
   - Run `zkcir --json --source -- --example square_root`
 - To see possible args, run `zkcir --help`
 
-# Gotchas
+## Gotchas
 
 - Detecting a value was randomly generated is naive and can false positive. It stores the randomly generated values and marks any value that matches as random.
 - Frameworks are moving targets. See the forks for the actual versions of the target dependencies.
   - [plonky2](https://github.com/chriscerie/plonky2)
 
-# Online Compiler - AWS Deployment
+## Online Compiler - AWS Deployment
 
 We offer a self-hosted web app solution. To use, first deploy the app with AWS CDK.
 
@@ -39,7 +37,7 @@ We offer a self-hosted web app solution. To use, first deploy the app with AWS C
 
 Internally fargate will compile the rust project with patched dependencies and store the executable in S3. It then sends the presigned url to lambda without access to other services and outbound internet to act as a sandboxed environment. Lambda then gets the executable and runs it, returning the resulting IR.
 
-# File Structure
+## File Structure
 
 | Folder                               | Description                                                        | Role                |
 | ------------------------------------ | ------------------------------------------------------------------ | ------------------- |
