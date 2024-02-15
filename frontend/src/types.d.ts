@@ -1,10 +1,6 @@
 export type ListIrsMetadataResponse = {
-  irs: [
-    {
-      repo_name: string;
-      circuit_version: string;
-      name: string;
-      description: string;
-    },
-  ];
+  irs: Array<{
+    repo_name: string;
+    description: string;
+  }>;
 };

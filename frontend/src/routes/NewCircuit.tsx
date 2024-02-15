@@ -2,24 +2,19 @@ import Upload, { FormValues } from '../components/Upload';
 import JSZip from 'jszip';
 import { Button, Group } from '@mantine/core';
 import { SubmitHandler, useForm } from 'react-hook-form';
-import { useUser } from '../UserContext';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import { IconCode } from '@tabler/icons-react';
 import axios from 'axios';
+import { useUser } from '../UserContext';
+import { useNavigate } from 'react-router-dom';
 
 function NewCircuit() {
+  const user = useUser();
+
+  const navigate = useNavigate();
+
   const { register, handleSubmit, watch, setValue, control } =
     useForm<FormValues>();
   const files = watch('files', new DataTransfer().files);
-  const navigate = useNavigate();
-  const user = useUser();
-
-  useEffect(() => {
-    if (!user.user) {
-      //navigate('/auth/google');
-    }
-  }, [user.user, navigate]);
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     const zip = new JSZip();
@@ -47,8 +42,6 @@ function NewCircuit() {
       return;
     }
 
-    const token = localStorage.getItem('token');
-
     const nameWithoutExtension = data.files[data.entryIndex].name
       .split('.')
       .slice(0, -1)
@@ -67,11 +60,11 @@ function NewCircuit() {
           circuit_version: string;
         }>('https://zkcir.chrisc.dev/v1/ir', formData, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${user.user?.auth_token}`,
           },
         })
-        .then((response) => {
-          console.log('Success:', response.data);
+        .then(() => {
+          navigate('/');
         })
         .catch((error) => {
           console.error('Error:', error);

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useUser } from '../UserContext';
+import { getUserClaims } from '../jwt';
 
 const Auth = () => {
   const location = useLocation();
@@ -35,30 +36,19 @@ const Auth = () => {
           },
         )
         .then((response) => {
-          localStorage.setItem('token', response.data.id_token);
+          const claims = getUserClaims(response.data.id_token);
 
-          axios
-            .get<{
-              name: string;
-              picture: string;
-              user_id: string;
-            }>('/v1/profile', {
-              headers: {
-                Authorization: `Bearer ${response.data.id_token}`,
-              },
-            })
-            .then((user) => {
-              setUserData({
-                name: user.data.name,
-                image: user.data.picture,
-              });
-            });
+          setUserData({
+            name: claims.name || 'Unknown',
+            image: claims.picture || '',
+            auth_token: response.data.id_token,
+          });
 
           navigate('/');
         })
         .catch((error) => console.error(error));
     }
-  }, [code]);
+  }, [code, navigate, setUserData]);
 
   return null;
 };

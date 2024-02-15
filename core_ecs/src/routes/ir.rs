@@ -4,6 +4,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use axum_extra::{
     extract::Multipart,
@@ -45,8 +46,13 @@ pub struct CompileToIrPayload {
     /// Name of the example artifact to compile. For example, `square_root` for `cargo run --example square_root`
     example_artifact: Option<String>,
 
-    /// Name of the repository to store the circuit in
+    /// Name of the repository to store the circuit in. Must only contain hyphens and lowercase letters
+    /// Reserved keywords: [`metadata`]
     repo_name: String,
+
+    /// Description of repository. If none provided, will use existing description if updating repository
+    /// or empty string if creating new repository
+    description: Option<String>,
 }
 
 #[derive(Serialize, ToSchema, Clone)]
@@ -120,6 +126,20 @@ pub async fn compile_to_ir(
             }
             "repo_name" => {
                 let data = field.text().await?;
+
+                if !data.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
+                    return Err(AppError::new(
+                        StatusCode::BAD_REQUEST,
+                        "Invalid repo name formatting".to_string(),
+                    ));
+                }
+
+                if data == "metadata" {
+                    return Err(AppError::new(
+                        StatusCode::BAD_REQUEST,
+                        "Reserved repository name".to_string(),
+                    ));
+                }
 
                 repo_name = Some(data);
             }
@@ -274,7 +294,7 @@ pub async fn compile_to_ir(
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!(
-            "{}/{repo_name}/{uuid_now}/description.txt",
+            "{}/{repo_name}/metadata/description.txt",
             user_data.claims.sub
         ))
         .body(ByteStream::from(
@@ -315,6 +335,7 @@ pub async fn compile_to_ir(
 
     Response::builder()
         .status(StatusCode::CREATED)
+        .header("content-type", "application/json")
         .body(
             serde_json::to_string(&CompileToIrResponse {
                 repo_name: repo_name_clone,
@@ -581,8 +602,6 @@ pub async fn get_ir(
 #[derive(Serialize, ToSchema, Clone)]
 pub struct IrMetadata {
     repo_name: String,
-    circuit_version: String,
-    name: String,
     description: String,
 }
 
@@ -596,7 +615,7 @@ pub struct ListIrsMetadataResponse {
     tag="IR",
     path="/v1/ir/metadata/list",
     responses(
-        (status = 200, description = "Got IRs", body = String),
+        (status = 200, description = "Got IRs", body = ListIrsMetadataResponse),
         (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
     ),
     security(
@@ -636,79 +655,53 @@ pub async fn list_irs_metadata(
             )
         })?;
 
-    let directories = list_objects_res
-        .common_prefixes
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|prefix| prefix.prefix)
-        .collect::<Vec<_>>();
+    tracing::info!("Found res: {list_objects_res:?}");
 
     let mut irs = Vec::new();
 
-    for dir in directories {
-        let list_objects_res = app_state
-            .get_s3_client()
-            .list_objects_v2()
-            .bucket(circuits_bucket_name)
-            .prefix(format!("{dir}/"))
-            .send()
-            .await
-            .map_err(|_| {
-                AppError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to list objects in S3".to_string(),
-                )
-            })?;
+    for object in list_objects_res.contents() {
+        tracing::info!("Found object: {object:?}");
 
-        let mut ir_metadata = IrMetadata {
-            repo_name: dir.split('/').last().unwrap().to_string(),
-            circuit_version: String::new(),
-            name: String::new(),
-            description: String::new(),
+        let Some(key) = object.key() else {
+            continue;
         };
 
-        for object in list_objects_res.contents.unwrap_or_default() {
-            let key = object.key.unwrap();
-
-            if key.ends_with("ir.json") {
-                ir_metadata.circuit_version = key.split('/').nth(1).unwrap().to_string();
-            } else if key.ends_with("description.txt") {
-                let description = app_state
-                    .get_s3_client()
-                    .get_object()
-                    .bucket(circuits_bucket_name)
-                    .key(key)
-                    .send()
-                    .await
-                    .map_err(|_| {
-                        AppError::new(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "Failed to get object from S3".to_string(),
-                        )
-                    })?;
-
-                let description = description.body.collect().await.map_err(|_| {
+        // Only one `description.txt` exists per repo, so we use it to get reference to all unique repos
+        if key.ends_with("description.txt") {
+            let description = app_state
+                .get_s3_client()
+                .get_object()
+                .bucket(circuits_bucket_name)
+                .key(key)
+                .send()
+                .await
+                .map_err(|_| {
                     AppError::new(
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to read object from S3".to_string(),
+                        "Failed to get object from S3".to_string(),
                     )
                 })?;
 
-                ir_metadata.description =
-                    String::from_utf8(description.to_vec()).map_err(|_| {
-                        AppError::new(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "Failed to convert description to string".to_string(),
-                        )
-                    })?;
-            }
-        }
+            let description = description.body.collect().await.map_err(|_| {
+                AppError::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to read object from S3".to_string(),
+                )
+            })?;
 
-        irs.push(ir_metadata);
+            let description_string = String::from_utf8(description.to_vec()).map_err(|_| {
+                AppError::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to convert description to string".to_string(),
+                )
+            })?;
+
+            irs.push(IrMetadata {
+                repo_name: key.split('/').nth(1).unwrap().to_string(),
+                description: description_string,
+            });
+        }
     }
 
-    Response::builder()
-        .status(StatusCode::OK)
-        .body(serde_json::to_string(&irs).map_err(AppError::from)?)
-        .map_err(AppError::from)
+    Ok(Json(ListIrsMetadataResponse { irs }))
 }

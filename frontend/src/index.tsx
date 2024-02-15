@@ -6,6 +6,9 @@ import reportWebVitals from './reportWebVitals';
 import { MantineProvider, createTheme } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dropzone/styles.css';
+import { UserProvider } from './UserContext';
+import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
 
 const theme = createTheme({
   autoContrast: true,
@@ -14,10 +17,19 @@ const theme = createTheme({
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
 );
+
+const queryClient = new QueryClient();
+
 root.render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="light" theme={theme}>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <UserProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </UserProvider>
+      </QueryClientProvider>
     </MantineProvider>
   </React.StrictMode>,
 );

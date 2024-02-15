@@ -25,11 +25,13 @@
     "aws-amplify": "^6.0.5",
     "axios": "^1.6.7",
     "jszip": "^3.10.1",
+    "jwt-decode": "^4.0.0",
     "material-ui-dropzone": "^3.5.0",
     "minimatch": "^9.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-drag-drop-files": "^2.3.10",
+    "react-error-boundary": "^4.0.12",
     "react-hook-form": "^7.50.1",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.20.0",
@@ -73,6 +75,7 @@
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "3.2.4",
     "sass": "^1.70.0"
   }

@@ -1,8 +1,17 @@
-import { createContext, useState, useContext, ReactNode } from 'react';
+import {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useEffect,
+} from 'react';
+import { getUserClaims } from './jwt';
+import { useQueryClient } from 'react-query';
 
 interface IUser {
   name: string;
   image: string;
+  auth_token: string;
 }
 
 interface IUserContext {
@@ -14,7 +23,29 @@ interface IUserContext {
 const UserContext = createContext<IUserContext | null>(null);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [userData, setUserData] = useState<IUser | undefined>(undefined);
+  const [userData, setUserData] = useState<IUser | undefined>(() => {
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      const claims = getUserClaims(token);
+
+      return {
+        name: claims.name || 'Unknown',
+        image: claims.picture || '',
+        auth_token: token,
+      };
+    }
+  });
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (userData) {
+      localStorage.setItem('token', userData.auth_token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }, [userData]);
 
   return (
     <UserContext.Provider
@@ -25,6 +56,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         },
         logout: () => {
           setUserData(undefined);
+          queryClient.clear();
+          window.location.href = '/';
         },
       }}
     >

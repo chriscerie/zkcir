@@ -10,6 +10,8 @@ use routes::auth;
 use routes::ir;
 use routes::profile;
 use state::AppState;
+use tower_http::cors::Any;
+use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use utoipa::{OpenApi, ToSchema};
 use utoipa_redoc::{Redoc, Servable};
@@ -39,7 +41,13 @@ async fn main() {
         .route("/v1/ir/:repo_name/:circuit_version", get(ir::get_ir))
         .route("/v1/ir/metadata/list", get(ir::list_irs_metadata))
         .with_state(app_state)
-        .fallback(static_files);
+        .fallback(static_files)
+        .layer(
+            CorsLayer::new()
+                .allow_methods(Any)
+                .allow_headers(Any)
+                .allow_origin(Any),
+        );
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();

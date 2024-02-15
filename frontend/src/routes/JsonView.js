@@ -11,6 +11,16 @@ import { IconBinaryTree, IconListTree } from '@tabler/icons-react';
 
 const iconStyle = { width: '1.2rem', height: '1.2rem' };
 
+const generateNodeIds = (node, nodeId = 0, ids = []) => {
+  ids.push(nodeId.toString());
+  if (Array.isArray(node.children)) {
+    node.children.forEach((child, index) =>
+      generateNodeIds(child, nodeId * 10 + index + 1, ids),
+    );
+  }
+  return ids;
+};
+
 function JsonView() {
   const [tree, setTree] = useState(null);
   const [inputJson, setInputJson] = useState('');
@@ -40,16 +50,6 @@ function JsonView() {
           : null}
       </TreeItem>
     );
-  };
-
-  const generateNodeIds = (node, nodeId = 0, ids = []) => {
-    ids.push(nodeId.toString());
-    if (Array.isArray(node.children)) {
-      node.children.forEach((child, index) =>
-        generateNodeIds(child, nodeId * 10 + index + 1, ids),
-      );
-    }
-    return ids;
   };
 
   const handleNodeToggle = (event, nodeIds) => {
