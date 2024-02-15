@@ -6,6 +6,7 @@ import { IconCode } from '@tabler/icons-react';
 import axios from 'axios';
 import { useUser } from '../UserContext';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 function NewCircuit() {
   const user = useUser();
@@ -15,6 +16,12 @@ function NewCircuit() {
   const { register, handleSubmit, watch, setValue, control } =
     useForm<FormValues>();
   const files = watch('files', new DataTransfer().files);
+
+  useEffect(() => {
+    if (!user.user) {
+      window.location.href = '/auth/google';
+    }
+  }, [user.user]);
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     const zip = new JSZip();
