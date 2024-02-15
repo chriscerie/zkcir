@@ -1,17 +1,16 @@
-import Upload from '../components/Upload';
+import Upload, { FormValues } from '../components/Upload';
 import JSZip from 'jszip';
 import { Button, Group } from '@mantine/core';
-import { useForm } from 'react-hook-form';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import { useUser } from '../UserContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { IconCode } from '@tabler/icons-react';
+import axios from 'axios';
 
-function Circuits() {
-  const { register, handleSubmit, watch, setValue } = useForm<{
-    files: FileList;
-    entryIndex?: number;
-  }>();
+function NewCircuit() {
+  const { register, handleSubmit, watch, setValue, control } =
+    useForm<FormValues>();
   const files = watch('files', new DataTransfer().files);
   const navigate = useNavigate();
   const user = useUser();
@@ -22,38 +21,62 @@ function Circuits() {
     }
   }, [user.user, navigate]);
 
-  const onSubmit = async () => {
-    if (!files || files.length === 0) {
-      alert('No files to process');
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    const zip = new JSZip();
+
+    // If user drops a project folder, Cargo.toml would be in folder/Cargo.toml, so remove the top layer
+    // If user drops the files directly, Cargo.toml would be at the top level
+    const shouldNotRemoveTopLevelDirectory = Array.from(data.files).some(
+      (file) => file.webkitRelativePath.startsWith('Cargo.toml'),
+    );
+
+    for (const file of data.files) {
+      const normalizedPath = shouldNotRemoveTopLevelDirectory
+        ? file.webkitRelativePath
+        : file.webkitRelativePath.split('/').slice(1).join('/');
+      zip.file(normalizedPath || file.name, file);
+    }
+
+    if (!data.entryIndex) {
+      alert('Please select an entry file');
       return;
     }
 
-    const zip = new JSZip();
-    for (const file of files) {
-      zip.file(file.webkitRelativePath || file.name, file);
+    if (!data.repoName) {
+      alert('Please enter a repository name');
+      return;
     }
+
+    const token = localStorage.getItem('token');
+
+    const nameWithoutExtension = data.files[data.entryIndex].name
+      .split('.')
+      .slice(0, -1)
+      .join('.');
 
     try {
       const blob = await zip.generateAsync({ type: 'blob' });
       const formData = new FormData();
       formData.append('zip_file', blob, 'Circuit.zip');
-      formData.append('cargo_args', 'cargo build --release');
+      formData.append('example_artifact', nameWithoutExtension);
+      formData.append('repo_name', data.repoName);
 
-      const response = await fetch('https://zkcir.chrisc.dev/v1/ir', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${user.user?.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      console.log('Success:', data);
-      alert('Compilation initiated successfully');
+      axios
+        .post<{
+          repo_name: string;
+          circuit_version: string;
+        }>('https://zkcir.chrisc.dev/v1/ir', formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((response) => {
+          console.log('Success:', response.data);
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+          alert('Error initiating compilation');
+        });
     } catch (error) {
       console.error('Error:', error);
       alert('Error initiating compilation');
@@ -61,7 +84,11 @@ function Circuits() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form
+      onSubmit={handleSubmit(onSubmit, (e) => {
+        console.error('Compiling failed:', e);
+      })}
+    >
       <Upload
         files={files}
         addFiles={(newFiles) => {
@@ -88,6 +115,7 @@ function Circuits() {
         register={register}
         entryIndex={watch('entryIndex')}
         setEntryIndex={(index) => setValue('entryIndex', index)}
+        control={control}
       />
       <Group style={{ marginTop: '0.7rem' }}>
         <Button
@@ -118,4 +146,4 @@ function Circuits() {
   );
 }
 
-export default Circuits;
+export default NewCircuit;

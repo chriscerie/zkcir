@@ -112,7 +112,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 
 	taskDefinition := awsecs.NewFargateTaskDefinition(stack, jsii.String("TaskDef"), &awsecs.FargateTaskDefinitionProps{
 		MemoryLimitMiB: jsii.Number(2048),
-		Cpu:            jsii.Number(512),
+		Cpu:            jsii.Number(1024),
 		ExecutionRole:  executionRole,
 	})
 

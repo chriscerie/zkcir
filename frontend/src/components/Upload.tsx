@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { Dropzone } from '@mantine/dropzone';
 import {
   Button,
@@ -17,8 +16,14 @@ import {
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
-import { UseFormRegister } from 'react-hook-form';
+import { Control, Controller, UseFormRegister } from 'react-hook-form';
 import { minimatch } from 'minimatch';
+
+export type FormValues = {
+  files: FileList;
+  entryIndex?: number;
+  repoName?: string;
+};
 
 export default function Upload({
   files,
@@ -27,26 +32,17 @@ export default function Upload({
   register,
   entryIndex,
   setEntryIndex,
+  control,
 }: {
   files: FileList;
   addFiles: (newFiles: File[]) => void;
   onFileRemove: (index: number) => void;
-  register: UseFormRegister<{
-    files: FileList;
-    entryIndex?: number;
-  }>;
+  register: UseFormRegister<FormValues>;
   entryIndex?: number;
   setEntryIndex: (index: number) => void;
+  control: Control<FormValues, unknown, FormValues>;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const input = fileInputRef.current;
-    if (input) {
-      input.setAttribute('directory', '');
-      input.setAttribute('webkitdirectory', '');
-    }
-  }, []);
+  const { ref: dropzoneRef } = register('files');
 
   const hasCargoTomlInRoot = Array.from(files).some((file) =>
     file.webkitRelativePath.startsWith('Cargo.toml'),
@@ -60,19 +56,11 @@ export default function Upload({
     <>
       <Dropzone
         onDrop={(files) => addFiles(files)}
-        onReject={(files) => console.log('rejected files', files)}
         maxSize={30 * 1024 ** 2}
         style={{ marginTop: '2rem', padding: '3rem' }}
         radius="md"
+        ref={dropzoneRef}
       >
-        <input
-          style={{ display: 'none' }}
-          id="folder-upload"
-          type="file"
-          multiple
-          {...register('files', { required: true })}
-        />
-
         <Group justify="center" style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
             <IconUpload
@@ -206,11 +194,31 @@ export default function Upload({
         style={{ marginTop: '1rem' }}
         radius="md"
       >
-        <TextInput label="Circuit name" required placeholder="My circuit" />
+        <Controller
+          render={({ field }) => (
+            <TextInput
+              {...field}
+              label="Repository name"
+              required
+              placeholder="My repository"
+            />
+          )}
+          defaultValue=""
+          name="repoName"
+          control={control}
+          rules={{
+            required: true,
+            pattern: {
+              value: /^[a-z-]+$/,
+              message:
+                'Repository name can only contain lowercase letters and hyphens',
+            },
+          }}
+        />
+
         <TextInput
           disabled
           label="Entry point"
-          required
           placeholder={
             entryIndex
               ? files[entryIndex].name

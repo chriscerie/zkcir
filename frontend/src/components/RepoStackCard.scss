@@ -1,0 +1,12 @@
+.title-link {
+  text-decoration: none;
+  color: var(--mantine-primary-color-filled-hover);
+}
+
+.title-link:hover {
+  text-decoration: underline;
+}
+
+.title-link:visited {
+  color: var(--mantine-primary-color-filled-hover);
+}

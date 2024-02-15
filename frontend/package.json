@@ -31,6 +31,7 @@
     "react-dom": "^18.2.0",
     "react-drag-drop-files": "^2.3.10",
     "react-hook-form": "^7.50.1",
+    "react-query": "^3.39.3",
     "react-router-dom": "^6.20.0",
     "react-scripts": "5.0.1",
     "react-tree-graph": "^8.0.1",

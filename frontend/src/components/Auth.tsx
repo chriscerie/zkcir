@@ -35,6 +35,8 @@ const Auth = () => {
           },
         )
         .then((response) => {
+          localStorage.setItem('token', response.data.id_token);
+
           axios
             .get<{
               name: string;
@@ -49,7 +51,6 @@ const Auth = () => {
               setUserData({
                 name: user.data.name,
                 image: user.data.picture,
-                token: response.data.id_token,
               });
             });
 

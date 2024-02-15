@@ -36,7 +36,8 @@ async fn main() {
         .route("/auth/google", get(auth::auth_google))
         .route("/v1/profile", get(profile::get_profile))
         .route("/v1/ir", post(ir::compile_to_ir))
-        .route("/v1/ir/:circuit_id/:circuit_version", get(ir::get_ir))
+        .route("/v1/ir/:repo_name/:circuit_version", get(ir::get_ir))
+        .route("/v1/ir/metadata/list", get(ir::list_irs_metadata))
         .with_state(app_state)
         .fallback(static_files);
 

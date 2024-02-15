@@ -3,7 +3,6 @@ import { createContext, useState, useContext, ReactNode } from 'react';
 interface IUser {
   name: string;
   image: string;
-  token: string;
 }
 
 interface IUserContext {
