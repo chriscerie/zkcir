@@ -121,13 +121,6 @@ pub async fn compile_to_ir(
             "repo_name" => {
                 let data = field.text().await?;
 
-                let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
-                    AppError::new(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Could not get circuits bucket name".to_string(),
-                    )
-                })?;
-
                 repo_name = Some(data);
             }
             "description" => {
