@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useUser } from '../UserContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useMutation } from 'react-query';
 
 function NewCircuit() {
   const user = useUser();
@@ -22,6 +23,27 @@ function NewCircuit() {
       window.location.href = '/auth/google';
     }
   }, [user.user]);
+
+  const compileMutation = useMutation(
+    (formData: FormData) =>
+      axios.post<{
+        repo_name: string;
+        circuit_version: string;
+      }>('https://zkcir.chrisc.dev/v1/ir', formData, {
+        headers: {
+          Authorization: `Bearer ${user.user?.auth_token}`,
+        },
+      }),
+    {
+      onSuccess: () => {
+        navigate('/');
+      },
+      onError: (error) => {
+        console.error('Error:', error);
+        alert('Error initiating compilation');
+      },
+    },
+  );
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     const zip = new JSZip();
@@ -61,22 +83,7 @@ function NewCircuit() {
       formData.append('example_artifact', nameWithoutExtension);
       formData.append('repo_name', data.repoName);
 
-      axios
-        .post<{
-          repo_name: string;
-          circuit_version: string;
-        }>('https://zkcir.chrisc.dev/v1/ir', formData, {
-          headers: {
-            Authorization: `Bearer ${user.user?.auth_token}`,
-          },
-        })
-        .then(() => {
-          navigate('/');
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-          alert('Error initiating compilation');
-        });
+      compileMutation.mutate(formData);
     } catch (error) {
       console.error('Error:', error);
       alert('Error initiating compilation');
@@ -119,6 +126,7 @@ function NewCircuit() {
             entryIndex={watch('entryIndex')}
             setEntryIndex={(index) => setValue('entryIndex', index)}
             control={control}
+            isLoading={compileMutation.isLoading}
           />
           <Group style={{ marginTop: '0.7rem' }}>
             <Button
@@ -132,6 +140,7 @@ function NewCircuit() {
                   color: 'white',
                 },
               }}
+              loading={compileMutation.isLoading}
             >
               Compile
             </Button>

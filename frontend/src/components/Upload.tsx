@@ -33,6 +33,7 @@ export default function Upload({
   entryIndex,
   setEntryIndex,
   control,
+  isLoading,
 }: {
   files: FileList;
   addFiles: (newFiles: File[]) => void;
@@ -41,6 +42,7 @@ export default function Upload({
   entryIndex?: number;
   setEntryIndex: (index: number) => void;
   control: Control<FormValues, unknown, FormValues>;
+  isLoading: boolean;
 }) {
   const { ref: dropzoneRef } = register('files');
 
@@ -60,6 +62,7 @@ export default function Upload({
         style={{ marginTop: '2rem', padding: '3rem' }}
         radius="md"
         ref={dropzoneRef}
+        disabled={isLoading}
       >
         <Group justify="center" style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
@@ -137,6 +140,7 @@ export default function Upload({
                 key={index}
                 fullWidth
                 variant={entryIndex == index ? 'gradient' : 'default'}
+                disabled={isLoading}
                 gradient={
                   entryIndex == index
                     ? { from: 'blue', to: 'teal', deg: 76 }
@@ -193,6 +197,7 @@ export default function Upload({
         legend="Generate Circuit Intermediate Representation"
         style={{ marginTop: '1rem' }}
         radius="md"
+        disabled={isLoading}
       >
         <Controller
           render={({ field }) => (
