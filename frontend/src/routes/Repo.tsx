@@ -102,22 +102,10 @@ export default function Repo() {
     },
   );
 
-  console.log(versions, irJson);
-
   const jsonStr = irJson?.ir
     .slice(1, -1)
     .replace(/\\n/g, '\n')
     .replace(/\\"/g, '"');
-
-  let jsonObj;
-  if (jsonStr) {
-    try {
-      jsonObj = JSON.parse(jsonStr);
-      console.log(jsonObj);
-    } catch (e) {
-      console.error('Error parsing JSON:', e);
-    }
-  }
 
   const [active, setActive] = useState(2);
 
