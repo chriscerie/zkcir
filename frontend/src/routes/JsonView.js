@@ -6,7 +6,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { TreeView } from '@mui/x-tree-view/TreeView';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
-import { Grid, JsonInput, Tabs } from '@mantine/core';
+import { AppShellMain, Container, Grid, JsonInput, Tabs } from '@mantine/core';
 import { IconBinaryTree, IconListTree } from '@tabler/icons-react';
 
 const iconStyle = { width: '1.2rem', height: '1.2rem' };
@@ -72,75 +72,79 @@ function JsonView() {
   }, [inputJson]);
 
   return (
-    <Grid>
-      <Grid.Col span={6}>
-        <JsonInput
-          label="JSON IR"
-          formatOnBlur
-          value={inputJson}
-          onChange={(value) => {
-            setInputJson(value);
-          }}
-          styles={{
-            input: { minHeight: 300 },
-          }}
-        />
-      </Grid.Col>
-      <Grid.Col span={6}>
-        <Tabs defaultValue="ast">
-          <Tabs.List>
-            <Tabs.Tab
-              value="ast"
-              leftSection={<IconListTree style={iconStyle} />}
-            >
-              AST
-            </Tabs.Tab>
-            <Tabs.Tab
-              value="tree"
-              leftSection={<IconBinaryTree style={iconStyle} />}
-            >
-              AST Tree
-            </Tabs.Tab>
-          </Tabs.List>
+    <AppShellMain>
+      <Container size="lg">
+        <Grid>
+          <Grid.Col span={6}>
+            <JsonInput
+              label="JSON IR"
+              formatOnBlur
+              value={inputJson}
+              onChange={(value) => {
+                setInputJson(value);
+              }}
+              styles={{
+                input: { minHeight: 300 },
+              }}
+            />
+          </Grid.Col>
+          <Grid.Col span={6}>
+            <Tabs defaultValue="ast">
+              <Tabs.List>
+                <Tabs.Tab
+                  value="ast"
+                  leftSection={<IconListTree style={iconStyle} />}
+                >
+                  AST
+                </Tabs.Tab>
+                <Tabs.Tab
+                  value="tree"
+                  leftSection={<IconBinaryTree style={iconStyle} />}
+                >
+                  AST Tree
+                </Tabs.Tab>
+              </Tabs.List>
 
-          <Tabs.Panel value="ast">
-            {tree && (
-              <TreeView
-                sx={{
-                  flexGrow: 1,
-                  overflowY: 'auto',
-                  '& .MuiTreeItem-root': {
-                    textAlign: 'left', // Aligns the TreeItem text to left
-                  },
-                }}
-                aria-label="IR Tree View"
-                defaultCollapseIcon={<ExpandMoreIcon />}
-                defaultExpandIcon={<ChevronRightIcon />}
-                expanded={expandedNodeIds}
-                onNodeToggle={handleNodeToggle}
-              >
-                {renderTree(tree)}
-              </TreeView>
-            )}
-          </Tabs.Panel>
+              <Tabs.Panel value="ast">
+                {tree && (
+                  <TreeView
+                    sx={{
+                      flexGrow: 1,
+                      overflowY: 'auto',
+                      '& .MuiTreeItem-root': {
+                        textAlign: 'left',
+                      },
+                    }}
+                    aria-label="IR Tree View"
+                    defaultCollapseIcon={<ExpandMoreIcon />}
+                    defaultExpandIcon={<ChevronRightIcon />}
+                    expanded={expandedNodeIds}
+                    onNodeToggle={handleNodeToggle}
+                  >
+                    {renderTree(tree)}
+                  </TreeView>
+                )}
+              </Tabs.Panel>
 
-          <Tabs.Panel value="tree">
-            {tree && (
-              <AnimatedTree
-                data={tree}
-                height={700}
-                width={500}
-                svgProps={{ transform: 'rotate(90)' }}
-                textProps={{ fill: 'white', transform: 'rotate(270)' }}
-                className={styles}
-                duration={750}
-                steps={20}
-              />
-            )}
-          </Tabs.Panel>
-        </Tabs>
-      </Grid.Col>
-    </Grid>
+              <Tabs.Panel value="tree">
+                {tree && (
+                  <AnimatedTree
+                    data={tree}
+                    height={700}
+                    width={500}
+                    svgProps={{ transform: 'rotate(90)' }}
+                    textProps={{ fill: 'white', transform: 'rotate(270)' }}
+                    className={styles}
+                    duration={750}
+                    steps={20}
+                  />
+                )}
+              </Tabs.Panel>
+            </Tabs>
+          </Grid.Col>
+        </Grid>
+      </Container>
+    </AppShellMain>
   );
 }
 

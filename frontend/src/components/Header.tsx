@@ -14,6 +14,7 @@ import {
   ActionIcon,
   useMantineColorScheme,
   useComputedColorScheme,
+  AppShellHeader,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -64,7 +65,7 @@ export default function Header() {
   ));
 
   return (
-    <div className={classes.header}>
+    <AppShellHeader>
       <Container className={classes.mainSection} size="md">
         <Group justify="space-between">
           <img src={logo} alt="Logo" style={{ width: 40 }} />
@@ -209,6 +210,6 @@ export default function Header() {
           <Tabs.List>{items}</Tabs.List>
         </Tabs>
       </Container>
-    </div>
+    </AppShellHeader>
   );
 }

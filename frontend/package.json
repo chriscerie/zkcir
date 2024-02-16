@@ -9,6 +9,7 @@
     "@mantine/core": "^7.5.2",
     "@mantine/dropzone": "^7.5.2",
     "@mantine/hooks": "^7.5.2",
+    "@monaco-editor/react": "^4.6.0",
     "@mui/icons-material": "^5.14.18",
     "@mui/lab": "^5.0.0-alpha.160",
     "@mui/material": "^5.15.4",
@@ -24,6 +25,7 @@
     "amplify": "^0.0.11",
     "aws-amplify": "^6.0.5",
     "axios": "^1.6.7",
+    "classnames": "^2.5.1",
     "jszip": "^3.10.1",
     "jwt-decode": "^4.0.0",
     "material-ui-dropzone": "^3.5.0",
@@ -70,12 +72,14 @@
     ]
   },
   "devDependencies": {
+    "@types/classnames": "^2.3.1",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss-preset-mantine": "^1.13.0",
     "prettier": "3.2.4",
     "sass": "^1.70.0"
   }

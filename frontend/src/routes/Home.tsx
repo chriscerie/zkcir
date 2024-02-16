@@ -1,4 +1,5 @@
 import {
+  AppShellMain,
   Button,
   Container,
   SimpleGrid,
@@ -55,71 +56,74 @@ export default function Home() {
   }, [isLoading]);
 
   return (
-    <Container
-      size={700}
-      className={classes.inner}
-      style={{
-        marginTop: '2rem',
-      }}
-    >
-      {!isLoading && (!user.user || !irs?.irs || irs?.irs.length == 0) && (
-        <>
-          <Space h="xl" />
-          <h1 className={classes.title}>
-            A{' '}
-            <Text
-              component="span"
-              variant="gradient"
-              gradient={{ from: 'blue', to: 'cyan' }}
-              inherit
-            >
-              framework-agnostic
-            </Text>{' '}
-            ZK proof circuit intermediate representation compiler
-          </h1>
-
-          <Text className={classes.description} c="dimmed">
-            Generate intermediate representations for zero knowledge proof
-            circuits to help analyze and find security flaws over a
-            framework-agnostic environment.
-          </Text>
-
-          <Link to="/new-circuit">
-            <Button
-              size="xl"
-              className={classes.control}
-              variant="gradient"
-              gradient={{ from: 'blue', to: 'cyan' }}
-              style={{
-                marginTop: '2rem',
-              }}
-            >
-              Create new circuit
-            </Button>
-          </Link>
-        </>
-      )}
-
-      <SimpleGrid cols={2}>
-        {showLoading ? (
+    <AppShellMain>
+      <Container
+        size={700}
+        className={classes.inner}
+        style={{
+          marginTop: '2rem',
+        }}
+      >
+        {!isLoading && (!user.user || !irs?.irs || irs?.irs.length == 0) && (
           <>
-            <Skeleton height={8} mt={6} width="100%" radius="xl" />
-            <Skeleton height={8} mt={6} width="100%" radius="xl" />
-            <Skeleton height={8} mt={6} width="100%" radius="xl" />
-            <Skeleton height={8} mt={6} width="100%" radius="xl" />
-            <Skeleton height={8} mt={6} width="100%" radius="xl" />
-            <Skeleton height={8} mt={6} width="70%" radius="xl" />
+            <Space h="xl" />
+            <h1 className={classes.title}>
+              A{' '}
+              <Text
+                component="span"
+                variant="gradient"
+                gradient={{ from: 'blue', to: 'cyan' }}
+                inherit
+              >
+                framework-agnostic
+              </Text>{' '}
+              ZK proof circuit intermediate representation compiler
+            </h1>
+
+            <Text className={classes.description} c="dimmed">
+              Generate intermediate representations for zero knowledge proof
+              circuits to help analyze and find security flaws over a
+              framework-agnostic environment.
+            </Text>
+
+            <Link to="/new-circuit">
+              <Button
+                size="xl"
+                className={classes.control}
+                variant="gradient"
+                gradient={{ from: 'blue', to: 'cyan' }}
+                style={{
+                  marginTop: '2rem',
+                }}
+              >
+                Create new circuit
+              </Button>
+            </Link>
           </>
-        ) : (
-          (irs?.irs || []).map((item, index) => (
-            <RepoStackCard
-              name={item.repo_name}
-              description={item.description}
-              key={index}
-            />
-          ))
         )}
-      </SimpleGrid>
-    </Container>
+
+        <SimpleGrid cols={2}>
+          {showLoading ? (
+            <>
+              <Skeleton height={8} mt={6} width="100%" radius="xl" />
+              <Skeleton height={8} mt={6} width="100%" radius="xl" />
+              <Skeleton height={8} mt={6} width="100%" radius="xl" />
+              <Skeleton height={8} mt={6} width="100%" radius="xl" />
+              <Skeleton height={8} mt={6} width="100%" radius="xl" />
+              <Skeleton height={8} mt={6} width="70%" radius="xl" />
+            </>
+          ) : (
+            (irs?.irs || []).map((item, index) => (
+              <RepoStackCard
+                name={item.repo_name}
+                description={item.description}
+                key={index}
+                ownerSub={user.user?.sub || ''}
+              />
+            ))
+          )}
+        </SimpleGrid>
+      </Container>
+    </AppShellMain>
   );
 }

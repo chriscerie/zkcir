@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 
 import Header from './components/Header';
 import JsonView from './routes/JsonView';
@@ -7,11 +7,12 @@ import Auth from './components/Auth';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './theme';
 import './App.css';
-import { Container } from '@mantine/core';
 import NotFound from './routes/NotFound';
 import NewCircuit from './routes/NewCircuit';
 import { ErrorBoundary } from 'react-error-boundary';
 import FallbackResetBoundary from './components/FallbackResetBoundary';
+import Repo from './routes/Repo';
+import { AppShell } from '@mantine/core';
 
 function App() {
   const navigate = useNavigate();
@@ -25,16 +26,20 @@ function App() {
       onError={(e) => alert(`Caught unexpected error: ${e}`)}
     >
       <ThemeProvider theme={theme}>
-        <Header />
-        <Container size="lg">
+        <AppShell
+          header={{ height: 90 }}
+          navbar={{ width: 70, breakpoint: 'sm' }}
+        >
+          <Header />
           <Routes>
             <Route path="/" Component={Home} />
             <Route path="/json-ir" Component={JsonView} />
             <Route path="/new-circuit" Component={NewCircuit} />
             <Route path="/auth/callback" Component={Auth} />
+            <Route path="/:owner/:repo" Component={Repo} />
             <Route path="*" Component={NotFound} />
           </Routes>
-        </Container>
+        </AppShell>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -13,6 +13,7 @@ use crate::{auth, ir, profile, UnauthorizedResponse};
         ir::compile_to_ir,
         ir::get_ir,
         ir::list_irs_metadata,
+        ir::list_ir_versions,
     ),
     modifiers(&SecurityAddon),
     components(schemas(
@@ -23,6 +24,7 @@ use crate::{auth, ir, profile, UnauthorizedResponse};
         ir::GetIrResponse,
         ir::IrMetadata,
         ir::ListIrsMetadataResponse,
+        ir::ListIrVersionsResponse,
     )),
     tags(
         (name = "zkcir", description = "Zero Proof Knowledge Circuits IR")

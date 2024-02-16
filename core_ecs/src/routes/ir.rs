@@ -655,13 +655,9 @@ pub async fn list_irs_metadata(
             )
         })?;
 
-    tracing::info!("Found res: {list_objects_res:?}");
-
     let mut irs = Vec::new();
 
     for object in list_objects_res.contents() {
-        tracing::info!("Found object: {object:?}");
-
         let Some(key) = object.key() else {
             continue;
         };
@@ -704,4 +700,75 @@ pub async fn list_irs_metadata(
     }
 
     Ok(Json(ListIrsMetadataResponse { irs }))
+}
+
+#[derive(Serialize, ToSchema, Clone)]
+pub struct ListIrVersionsResponse {
+    /// uuid v7 of versions sorted by time from newest to oldest
+    versions: Vec<String>,
+}
+
+/// List IR versions of a specific repo
+#[utoipa::path(get,
+    tag="IR",
+    path="/v1/ir/{repo_name}/versions",
+    responses(
+        (status = 200, description = "Got versions", body = ListIrsMetadataResponse),
+        (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
+    ),
+    security(
+        ("token" = [])
+    )
+)]
+#[debug_handler]
+pub async fn list_ir_versions(
+    TypedHeader(bearer): TypedHeader<Authorization<Bearer>>,
+    State(app_state): State<AppState>,
+    Path(repo_name): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let token = bearer
+        .token()
+        .to_string()
+        .trim_start_matches("Bearer ")
+        .to_string();
+    let user_data = jwt::get_user_claims(&token)?;
+
+    let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Could not get circuits bucket name".to_string(),
+        )
+    })?;
+
+    let list_objects_res = app_state
+        .get_s3_client()
+        .list_objects_v2()
+        .bucket(circuits_bucket_name)
+        .prefix(format!("{}/{}/", user_data.claims.sub, repo_name))
+        .send()
+        .await
+        .map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to list objects in S3".to_string(),
+            )
+        })?;
+
+    let mut versions = Vec::new();
+
+    for object in list_objects_res.contents() {
+        let Some(key) = object.key() else {
+            continue;
+        };
+
+        // Exactly one `source.zip` exists per version, so we use it to get reference to all unique versions
+        if key.ends_with("source.zip") {
+            versions.push(key.split('/').nth(2).unwrap().to_string());
+        }
+    }
+
+    versions.sort();
+    versions.reverse();
+
+    Ok(Json(ListIrVersionsResponse { versions }))
 }

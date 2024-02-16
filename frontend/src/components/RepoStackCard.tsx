@@ -6,9 +6,11 @@ import './RepoStackCard.scss';
 export default function RepoStackCard({
   name,
   description,
+  ownerSub,
 }: {
   name: string;
   description: string;
+  ownerSub: string;
 }) {
   return (
     <Paper
@@ -24,7 +26,7 @@ export default function RepoStackCard({
     >
       <Flex align="center" gap={'xs'}>
         <IconBook2 size={24} />
-        <Link to={`/repo/${name}`} className="title-link">
+        <Link to={`/${ownerSub}/${name}`} className="title-link">
           <Title order={5}>{name}</Title>
         </Link>
         <Badge variant="outline">Private</Badge>

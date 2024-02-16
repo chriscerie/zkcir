@@ -39,6 +39,7 @@ const Auth = () => {
           const claims = getUserClaims(response.data.id_token);
 
           setUserData({
+            sub: claims.sub,
             name: claims.name || 'Unknown',
             image: claims.picture || '',
             auth_token: response.data.id_token,

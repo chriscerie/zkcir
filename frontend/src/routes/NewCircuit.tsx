@@ -1,6 +1,6 @@
 import Upload, { FormValues } from '../components/Upload';
 import JSZip from 'jszip';
-import { Button, Group } from '@mantine/core';
+import { AppShellMain, Button, Container, Group } from '@mantine/core';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { IconCode } from '@tabler/icons-react';
 import axios from 'axios';
@@ -84,65 +84,69 @@ function NewCircuit() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit, (e) => {
-        console.error('Compiling failed:', e);
-      })}
-    >
-      <Upload
-        files={files}
-        addFiles={(newFiles) => {
-          const filteredFiles = newFiles.filter(
-            (file) =>
-              !file.webkitRelativePath.includes('target/debug') &&
-              !file.webkitRelativePath.includes('target/release'),
-          );
-          const dataTransfer = new DataTransfer();
-          Array.from(files).forEach((file) => dataTransfer.items.add(file));
-          filteredFiles.forEach((file) => dataTransfer.items.add(file));
-          setValue('files', dataTransfer.files, { shouldDirty: true });
-        }}
-        onFileRemove={(index) => {
-          const newFiles = Array.from(files).filter((_, i) => i !== index);
-          const dataTransfer = new DataTransfer();
-          newFiles.forEach((file) => dataTransfer.items.add(file));
-          setValue('files', dataTransfer.files, { shouldDirty: true });
-
-          if (index === watch('entryIndex')) {
-            setValue('entryIndex', undefined);
-          }
-        }}
-        register={register}
-        entryIndex={watch('entryIndex')}
-        setEntryIndex={(index) => setValue('entryIndex', index)}
-        control={control}
-      />
-      <Group style={{ marginTop: '0.7rem' }}>
-        <Button
-          variant="filled"
-          color="green"
-          radius="md"
-          type="submit"
-          leftSection={<IconCode size={'1.2rem'} />}
-          styles={{
-            root: {
-              color: 'white',
-            },
-          }}
+    <AppShellMain>
+      <Container size="lg">
+        <form
+          onSubmit={handleSubmit(onSubmit, (e) => {
+            console.error('Compiling failed:', e);
+          })}
         >
-          Compile
-        </Button>
+          <Upload
+            files={files}
+            addFiles={(newFiles) => {
+              const filteredFiles = newFiles.filter(
+                (file) =>
+                  !file.webkitRelativePath.includes('target/debug') &&
+                  !file.webkitRelativePath.includes('target/release'),
+              );
+              const dataTransfer = new DataTransfer();
+              Array.from(files).forEach((file) => dataTransfer.items.add(file));
+              filteredFiles.forEach((file) => dataTransfer.items.add(file));
+              setValue('files', dataTransfer.files, { shouldDirty: true });
+            }}
+            onFileRemove={(index) => {
+              const newFiles = Array.from(files).filter((_, i) => i !== index);
+              const dataTransfer = new DataTransfer();
+              newFiles.forEach((file) => dataTransfer.items.add(file));
+              setValue('files', dataTransfer.files, { shouldDirty: true });
 
-        <Button
-          variant="transparent"
-          color="pink"
-          radius="md"
-          style={{ padding: '0 0.3rem' }}
-        >
-          Cancel
-        </Button>
-      </Group>
-    </form>
+              if (index === watch('entryIndex')) {
+                setValue('entryIndex', undefined);
+              }
+            }}
+            register={register}
+            entryIndex={watch('entryIndex')}
+            setEntryIndex={(index) => setValue('entryIndex', index)}
+            control={control}
+          />
+          <Group style={{ marginTop: '0.7rem' }}>
+            <Button
+              variant="filled"
+              color="green"
+              radius="md"
+              type="submit"
+              leftSection={<IconCode size={'1.2rem'} />}
+              styles={{
+                root: {
+                  color: 'white',
+                },
+              }}
+            >
+              Compile
+            </Button>
+
+            <Button
+              variant="transparent"
+              color="pink"
+              radius="md"
+              style={{ padding: '0 0.3rem' }}
+            >
+              Cancel
+            </Button>
+          </Group>
+        </form>
+      </Container>
+    </AppShellMain>
   );
 }
 

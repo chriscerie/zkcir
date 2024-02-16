@@ -9,6 +9,7 @@ import { getUserClaims } from './jwt';
 import { useQueryClient } from 'react-query';
 
 interface IUser {
+  sub: string;
   name: string;
   image: string;
   auth_token: string;
@@ -30,6 +31,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       const claims = getUserClaims(token);
 
       return {
+        sub: claims.sub,
         name: claims.name || 'Unknown',
         image: claims.picture || '',
         auth_token: token,
