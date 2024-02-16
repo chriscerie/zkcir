@@ -97,7 +97,8 @@ function NewCircuit() {
               const filteredFiles = newFiles.filter(
                 (file) =>
                   !file.webkitRelativePath.includes('target/debug') &&
-                  !file.webkitRelativePath.includes('target/release'),
+                  !file.webkitRelativePath.includes('target/release') &&
+                  !file.webkitRelativePath.includes('.git/'),
               );
               const dataTransfer = new DataTransfer();
               Array.from(files).forEach((file) => dataTransfer.items.add(file));

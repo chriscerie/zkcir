@@ -13,6 +13,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import FallbackResetBoundary from './components/FallbackResetBoundary';
 import Repo from './routes/Repo';
 import { AppShell } from '@mantine/core';
+import 'allotment/dist/style.css';
 
 function App() {
   const navigate = useNavigate();
