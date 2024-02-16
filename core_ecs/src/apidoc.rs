@@ -14,6 +14,7 @@ use crate::{auth, ir, profile, UnauthorizedResponse};
         ir::get_ir,
         ir::list_irs_metadata,
         ir::list_ir_versions,
+        ir::get_ir_source,
     ),
     modifiers(&SecurityAddon),
     components(schemas(

@@ -1,5 +1,6 @@
 use aws_sdk_s3::{presigning::PresigningConfig, primitives::ByteStream};
 use axum::{
+    body::Body,
     debug_handler,
     extract::{Path, State},
     http::StatusCode,
@@ -711,7 +712,7 @@ pub struct ListIrVersionsResponse {
 /// List IR versions of a specific repo
 #[utoipa::path(get,
     tag="IR",
-    path="/v1/ir/{repo_name}/versions",
+    path="/v1/ir/versions/{repo_name}",
     responses(
         (status = 200, description = "Got versions", body = ListIrsMetadataResponse),
         (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
@@ -771,4 +772,60 @@ pub async fn list_ir_versions(
     versions.reverse();
 
     Ok(Json(ListIrVersionsResponse { versions }))
+}
+
+/// Get IR source as zip
+#[utoipa::path(get,
+    tag="IR",
+    path="/v1/ir/source/{owner}/{repo_name}/{circuit_version}",
+    responses(
+        (status = 200, description = "Got source", body = Vec<u8>, content_type = "application/zip"),
+        (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
+        (status = 404, description = "Invalid circuit id", body = String),
+    ),
+    security(
+        ("token" = [])
+    )
+)]
+#[debug_handler]
+pub async fn get_ir_source(
+    TypedHeader(_bearer): TypedHeader<Authorization<Bearer>>,
+    State(app_state): State<AppState>,
+    Path((owner, repo_name, circuit_version)): Path<(String, String, String)>,
+) -> Result<impl IntoResponse, AppError> {
+    // TODO: check if user has access to the repo
+
+    let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Could not get circuits bucket name".to_string(),
+        )
+    })?;
+
+    let source = app_state
+        .get_s3_client()
+        .get_object()
+        .bucket(circuits_bucket_name)
+        .key(format!("{owner}/{repo_name}/{circuit_version}/source.zip"))
+        .send()
+        .await
+        .map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get source from S3".to_string(),
+            )
+        })?;
+
+    let source = source.body.collect().await.map_err(|_| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to read source from S3".to_string(),
+        )
+    })?;
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "application/zip")
+        .body(Body::from(source.into_bytes()))
+        .map_err(AppError::from)
 }

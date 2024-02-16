@@ -13,3 +13,5 @@ export type GetIrVersionsResponse = {
   // Array of uuid v7 strings
   versions: Array<string>;
 };
+
+export type GetIrSourceResponse = Blob;

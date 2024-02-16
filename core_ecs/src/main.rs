@@ -41,6 +41,10 @@ async fn main() {
         .route("/v1/ir/:repo_name/:circuit_version", get(ir::get_ir))
         .route("/v1/ir/metadata/list", get(ir::list_irs_metadata))
         .route("/v1/ir/versions/:repo_name", get(ir::list_ir_versions))
+        .route(
+            "/v1/ir/source/:owner/:repo_name/:circuit_version",
+            get(ir::get_ir_source),
+        )
         .with_state(app_state)
         .fallback(static_files)
         .layer(
