@@ -174,8 +174,7 @@ export default function Repo() {
   );
 
   // Backend returns string of string
-  const jsonStr =
-    irJsonResponse?.data.ir;
+  const jsonStr = irJsonResponse?.data.ir;
 
   const [active, setActive] = useState(2);
 
