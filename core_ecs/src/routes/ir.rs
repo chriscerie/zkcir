@@ -28,6 +28,7 @@ use tokio::{io::AsyncWriteExt, time::timeout};
 use utoipa::ToSchema;
 use uuid::{NoContext, Timestamp, Uuid};
 use zip::ZipArchive;
+use zkcir::ir::Cir;
 
 use crate::{app_error::AppError, jwt, state::AppState, zip::zip_path};
 
@@ -496,8 +497,18 @@ async fn compile_and_upload(
         .as_ref()
         .to_vec();
 
-    let ir_string = String::from_utf8(json_ir_bytes.clone())
-        .map_err(|_| format!("Failed to convert IR bytes to string: {json_ir_bytes:#?}"))?;
+    let json_ir_string = String::from_utf8(json_ir_bytes.clone())
+        .map_err(|_| format!("Failed to convert IR bytes to string: {json_ir_bytes:#?}"))?
+        // Otherwise it is a string of a string
+        .trim_start_matches('"')
+        .trim_end_matches('"')
+        .replace("\\n", "\n")
+        .replace("\\\"", "\"");
+
+    let cir =
+        Cir::from_json(&json_ir_string).map_err(|e| format!("Failed to parse json CIR: {e}"))?;
+
+    let source_ir_string = cir.to_code_ir();
 
     app_state
         .get_s3_client()
@@ -507,16 +518,22 @@ async fn compile_and_upload(
             "{}/{repo_name}/{circuit_version}/ir.json",
             data.claims.sub
         ))
-        .body(ByteStream::from(
-            ir_string
-                // Otherwise it is a string of a string
-                .trim_start_matches('"')
-                .trim_end_matches('"')
-                .replace("\\n", "\n")
-                .replace("\\\"", "\"")
-                .into_bytes(),
-        ))
+        .body(ByteStream::from(json_ir_string.into_bytes()))
         .content_type("application/json")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to upload to S3: {e}"))?;
+
+    app_state
+        .get_s3_client()
+        .put_object()
+        .bucket(circuits_bucket_name)
+        .key(format!(
+            "{}/{repo_name}/{circuit_version}/ir.cir",
+            data.claims.sub
+        ))
+        .body(ByteStream::from(source_ir_string.into_bytes()))
+        .content_type("text/plain")
         .send()
         .await
         .map_err(|e| format!("Failed to upload to S3: {e}"))?;
@@ -536,10 +553,13 @@ fn is_file_ready(zip_path: &std::path::Path) -> std::io::Result<bool> {
 #[derive(Serialize, ToSchema, Clone)]
 pub struct GetIrResponse {
     /// IR as JSON
-    ir: String,
+    json: String,
+
+    /// IR as CIR
+    cir: String,
 }
 
-/// Get IR as JSON
+/// Get IR
 #[utoipa::path(get,
     tag="IR",
     path="/v1/ir/{repo_name}/{circuit_version}",
@@ -573,7 +593,7 @@ pub async fn get_ir(
         )
     })?;
 
-    let ir_result = app_state
+    let ir_json_result = app_state
         .get_s3_client()
         .get_object()
         .bucket(circuits_bucket_name)
@@ -584,15 +604,40 @@ pub async fn get_ir(
         .send()
         .await;
 
-    if let Ok(res) = ir_result {
-        let ir_bytes = res.body.collect().await.map_err(|_| {
+    let ir_cir_result = app_state
+        .get_s3_client()
+        .get_object()
+        .bucket(circuits_bucket_name)
+        .key(format!(
+            "{}/{repo_name}/{circuit_version}/ir.cir",
+            user_data.claims.sub
+        ))
+        .send()
+        .await;
+
+    if let (Ok(ir_json_res), Ok(ir_cir_res)) = (ir_json_result, ir_cir_result) {
+        let ir_json_bytes = ir_json_res.body.collect().await.map_err(|_| {
             AppError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to read IR from S3".to_string(),
             )
         })?;
 
-        let ir_string = String::from_utf8(ir_bytes.to_vec()).map_err(|_| {
+        let ir_cir_bytes = ir_cir_res.body.collect().await.map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to read IR from S3".to_string(),
+            )
+        })?;
+
+        let ir_json_string = String::from_utf8(ir_json_bytes.to_vec()).map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to convert IR bytes to string".to_string(),
+            )
+        })?;
+
+        let ir_cir_string = String::from_utf8(ir_cir_bytes.to_vec()).map_err(|_| {
             AppError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to convert IR bytes to string".to_string(),
@@ -601,7 +646,13 @@ pub async fn get_ir(
 
         return Response::builder()
             .status(StatusCode::OK)
-            .body(serde_json::to_string(&GetIrResponse { ir: ir_string }).map_err(AppError::from)?)
+            .body(
+                serde_json::to_string(&GetIrResponse {
+                    json: ir_json_string,
+                    cir: ir_cir_string,
+                })
+                .map_err(AppError::from)?,
+            )
             .map_err(AppError::from);
     }
 

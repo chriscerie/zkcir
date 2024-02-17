@@ -25,7 +25,7 @@ import JSZip from 'jszip';
 import { useUser } from '../../UserContext';
 import NotFound from '../NotFound';
 import {
-  GetIrJsonResponse,
+  GetIrResponse,
   GetIrSourceResponse,
   GetIrVersionsResponse,
 } from '../../types';
@@ -91,16 +91,16 @@ export default function Repo() {
     },
   );
 
-  const getIrJsonUrl = `https://zkcir.chrisc.dev/v1/ir/${repo}/${versions?.versions[0]}`;
+  const getIrUrl = `https://zkcir.chrisc.dev/v1/ir/${repo}/${versions?.versions[0]}`;
 
   const {
-    data: irJsonResponse,
-    error: irJsonError,
+    data: irResponse,
+    error: irError,
     isLoading: isIrLoading,
-  } = useQuery<AxiosResponse<GetIrJsonResponse>, AxiosError>(
-    getIrJsonUrl,
+  } = useQuery<AxiosResponse<GetIrResponse>, AxiosError>(
+    getIrUrl,
     async () => {
-      const response = await axios.get<GetIrJsonResponse>(getIrJsonUrl, {
+      const response = await axios.get<GetIrResponse>(getIrUrl, {
         headers: {
           Authorization: `Bearer ${user.user?.auth_token}`,
         },
@@ -173,9 +173,6 @@ export default function Repo() {
     },
   );
 
-  // Backend returns string of string
-  const jsonStr = irJsonResponse?.data.ir;
-
   const [active, setActive] = useState(2);
 
   if (versionsError?.status === 404) {
@@ -227,7 +224,8 @@ export default function Repo() {
           </Allotment.Pane>
           <CodeEditor selectedSource={selectedSource} />
           <IrEditor
-            jsonStr={jsonStr}
+            jsonStr={irResponse?.data.json}
+            cirStr={irResponse?.data.cir}
             isLoading={isVersionsLoading || isSourceLoading || isIrLoading}
           />
         </Allotment>

@@ -1,6 +1,5 @@
 import {
   Button,
-  Skeleton,
   Space,
   Tabs,
   Text,
@@ -15,19 +14,22 @@ import { useEffect, useState } from 'react';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
+const CIR = 'cir';
 
 export default function IrEditor({
   jsonStr,
+  cirStr,
   isLoading,
 }: {
   jsonStr?: string;
+  cirStr?: string;
   isLoading: boolean;
 }) {
   const { colorScheme } = useMantineColorScheme();
 
-  const [page, setPage] = useState<string | null>(jsonStr ? JSON : COMPILATION);
+  const [page, setPage] = useState<string | null>(jsonStr ? CIR : COMPILATION);
 
-  const hasLoaded = !!jsonStr;
+  const hasLoaded = !!jsonStr && !!cirStr;
 
   const [activeIndex, setActiveIndex] = useState(hasLoaded ? 3 : 2);
 
@@ -59,13 +61,23 @@ export default function IrEditor({
           </Tabs.Tab>
 
           <Tabs.Tab
+            value={CIR}
+            leftSection={
+              <IconSettings style={{ width: rem(12), height: rem(12) }} />
+            }
+            disabled={!jsonStr}
+          >
+            ir.cir
+          </Tabs.Tab>
+
+          <Tabs.Tab
             value={JSON}
             leftSection={
               <IconSettings style={{ width: rem(12), height: rem(12) }} />
             }
             disabled={!jsonStr}
           >
-            output.json
+            ir.json
           </Tabs.Tab>
         </Tabs.List>
 
@@ -79,12 +91,21 @@ export default function IrEditor({
         </Tabs.Panel>
 
         <Tabs.Panel
+          value={CIR}
+          style={{
+            padding: '0.2rem 1rem',
+          }}
+        >
+          <Text size="sm">{'zkcir_out > ir.cir'}</Text>
+        </Tabs.Panel>
+
+        <Tabs.Panel
           value={JSON}
           style={{
             padding: '0.2rem 1rem',
           }}
         >
-          <Text size="sm">output.json</Text>
+          <Text size="sm">{'zkcir_out > ir.json'}</Text>
         </Tabs.Panel>
       </Tabs>
 
@@ -138,7 +159,7 @@ export default function IrEditor({
               <Space h="lg" />
 
               {activeIndex == 3 && (
-                <Button variant="outline" onClick={() => setPage(JSON)}>
+                <Button variant="outline" onClick={() => setPage(CIR)}>
                   Go to IR
                 </Button>
               )}
@@ -147,10 +168,11 @@ export default function IrEditor({
         </div>
       )}
 
-      {page == JSON && !isLoading && (
+      {(page == JSON || page == CIR) && !isLoading && (
         <Editor
-          language="json"
-          value={jsonStr}
+          // Custom language cir is not supported, but using rust provides some syntax highlighting
+          language={page == JSON ? 'json' : 'rust'}
+          value={page == JSON ? jsonStr : cirStr}
           options={{
             readOnly: true,
             padding: { top: '20rem' },

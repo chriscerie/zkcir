@@ -32,3 +32,4 @@ uuid = { version = "1.6.1", features = ["v4", "v7"] }
 walkdir = "2.4.0"
 zip = "0.6.6"
 common = { path = "../common" }
+zkcir = { version = "0.1.0", path = "../zkcir" }

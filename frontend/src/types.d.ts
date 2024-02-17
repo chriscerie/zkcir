@@ -5,8 +5,9 @@ export type ListIrsMetadataResponse = {
   }>;
 };
 
-export type GetIrJsonResponse = {
-  ir: string;
+export type GetIrResponse = {
+  json: string;
+  cir: string;
 };
 
 export type GetIrVersionsResponse = {

@@ -973,6 +973,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "zip",
+ "zkcir 0.1.0",
 ]
 
 [[package]]
