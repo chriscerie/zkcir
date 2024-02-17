@@ -2,14 +2,12 @@ import {
   AppShellMain,
   AppShellNavbar,
   Stack,
-  Tabs,
   Tooltip,
   UnstyledButton,
   rem,
-  useMantineColorScheme,
 } from '@mantine/core';
 import { useQuery } from 'react-query';
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import { useParams } from 'react-router-dom';
 import {
   IconChevronDown,
@@ -20,7 +18,6 @@ import {
   IconSettings,
 } from '@tabler/icons-react';
 import { useState } from 'react';
-import { Editor } from '@monaco-editor/react';
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
 import { TreeView } from '@mui/x-tree-view';
@@ -70,16 +67,15 @@ function NavbarLink({
 export default function Repo() {
   const user = useUser();
 
-  const { colorScheme } = useMantineColorScheme();
-
   const { repo } = useParams();
 
   const getVersionsUrl = `https://zkcir.chrisc.dev/v1/ir/versions/${repo}`;
 
-  const { data: versions, error: versionsError } = useQuery<
-    GetIrVersionsResponse,
-    AxiosError
-  >(
+  const {
+    data: versions,
+    error: versionsError,
+    isLoading: isVersionsLoading,
+  } = useQuery<GetIrVersionsResponse, AxiosError>(
     getVersionsUrl,
     async () => {
       const response = await axios.get<GetIrVersionsResponse>(getVersionsUrl, {
@@ -97,10 +93,11 @@ export default function Repo() {
 
   const getIrJsonUrl = `https://zkcir.chrisc.dev/v1/ir/${repo}/${versions?.versions[0]}`;
 
-  const { data: irJson, error: irJsonError } = useQuery<
-    GetIrJsonResponse,
-    AxiosError
-  >(
+  const {
+    data: irJsonResponse,
+    error: irJsonError,
+    isLoading: isIrLoading,
+  } = useQuery<AxiosResponse<GetIrJsonResponse>, AxiosError>(
     getIrJsonUrl,
     async () => {
       const response = await axios.get<GetIrJsonResponse>(getIrJsonUrl, {
@@ -109,11 +106,12 @@ export default function Repo() {
         },
       });
 
-      return response.data;
+      return response;
     },
     {
       enabled: !!versions?.versions,
       staleTime: Infinity,
+      refetchInterval: (data) => (data?.status === 200 ? false : 3000),
     },
   );
 
@@ -123,10 +121,11 @@ export default function Repo() {
 
   const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/ir/source/${user.user?.sub}/${repo}/${versions?.versions[0]}`;
 
-  const { data: irSource, error: irSourceError } = useQuery<
-    IFileNode,
-    AxiosError
-  >(
+  const {
+    data: irSource,
+    error: irSourceError,
+    isLoading: isSourceLoading,
+  } = useQuery<IFileNode, AxiosError>(
     getIrSourceUrl,
     async () => {
       const response = await axios.get<GetIrSourceResponse>(getIrSourceUrl, {
@@ -175,10 +174,12 @@ export default function Repo() {
   );
 
   // Backend returns string of string
-  const jsonStr = irJson?.ir
-    .slice(1, -1)
-    .replace(/\\n/g, '\n')
-    .replace(/\\"/g, '"');
+  const jsonStr =
+    irJsonResponse?.data.ir &&
+    irJsonResponse?.data.ir
+      .slice(1, -1)
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"');
 
   const [active, setActive] = useState(2);
 
@@ -218,7 +219,7 @@ export default function Repo() {
               {irSource &&
                 Object.entries(irSource).map(([name, node]) => (
                   <FileNode
-                    key="name"
+                    key={name}
                     name={name}
                     node={node}
                     path={name}
@@ -230,7 +231,10 @@ export default function Repo() {
             </TreeView>
           </Allotment.Pane>
           <CodeEditor selectedSource={selectedSource} />
-          <IrEditor jsonStr={jsonStr} />
+          <IrEditor
+            jsonStr={jsonStr}
+            isLoading={isVersionsLoading || isSourceLoading || isIrLoading}
+          />
         </Allotment>
       </AppShellMain>
     </>

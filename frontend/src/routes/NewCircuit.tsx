@@ -35,8 +35,8 @@ function NewCircuit() {
         },
       }),
     {
-      onSuccess: () => {
-        navigate('/');
+      onSuccess: (data) => {
+        navigate(`/${user.user?.sub}/${data.data.repo_name}`);
       },
       onError: (error) => {
         console.error('Error:', error);

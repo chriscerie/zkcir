@@ -22,13 +22,13 @@ export function getLanguageInfo(extension: string) {
       };
     case 'toml':
       return {
-        monacoLanguage: 'toml',
+        monacoLanguage: 'plaintext',
         iconComponent: IconSettings,
         iconColor: '#6d8086',
       };
     case 'lock':
       return {
-        monacoLanguage: 'lock',
+        monacoLanguage: 'plaintext',
         iconComponent: IconAlignLeft,
         iconColor: '#6d8086',
       };
