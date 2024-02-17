@@ -2,6 +2,7 @@ import {
   AppShellMain,
   AppShellNavbar,
   Stack,
+  Tabs,
   Tooltip,
   UnstyledButton,
   rem,
@@ -33,6 +34,9 @@ import {
 } from '../../types';
 import FileNode, { IFileNode } from './FileNode';
 import classes from './index.module.css';
+import IrEditor from './IrEditor';
+import { SelectedSource } from './SelectedSource';
+import CodeEditor from './CodeEditor';
 
 const mockdata = [
   { icon: IconFiles, label: 'File' },
@@ -113,10 +117,9 @@ export default function Repo() {
     },
   );
 
-  const [selectedSource, setSelectedSource] = useState<{
-    path: string;
-    source: string;
-  } | null>();
+  const [selectedSource, setSelectedSource] = useState<
+    SelectedSource | undefined
+  >();
 
   const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/ir/source/${user.user?.sub}/${repo}/${versions?.versions[0]}`;
 
@@ -219,30 +222,15 @@ export default function Repo() {
                     name={name}
                     node={node}
                     path={name}
-                    onFileClick={(path, contents) => {
-                      setSelectedSource({ path, source: contents });
+                    onFileClick={(fileName, path, contents) => {
+                      setSelectedSource({ fileName, path, source: contents });
                     }}
                   />
                 ))}
             </TreeView>
           </Allotment.Pane>
-          <Allotment.Pane>
-            <Editor
-              language="rust"
-              value={selectedSource?.source || undefined}
-              theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
-            />
-          </Allotment.Pane>
-          <Allotment.Pane>
-            <Editor
-              language="json"
-              value={jsonStr}
-              options={{
-                readOnly: true,
-              }}
-              theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
-            />
-          </Allotment.Pane>
+          <CodeEditor selectedSource={selectedSource} />
+          <IrEditor jsonStr={jsonStr} />
         </Allotment>
       </AppShellMain>
     </>
