@@ -496,6 +496,9 @@ async fn compile_and_upload(
         .as_ref()
         .to_vec();
 
+    let ir_string = String::from_utf8(json_ir_bytes.clone())
+        .map_err(|_| format!("Failed to convert IR bytes to string: {json_ir_bytes:#?}"))?;
+
     app_state
         .get_s3_client()
         .put_object()
@@ -504,7 +507,15 @@ async fn compile_and_upload(
             "{}/{repo_name}/{circuit_version}/ir.json",
             data.claims.sub
         ))
-        .body(ByteStream::from(json_ir_bytes))
+        .body(ByteStream::from(
+            ir_string
+                // Otherwise it is a string of a string
+                .trim_start_matches('"')
+                .trim_end_matches('"')
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .into_bytes(),
+        ))
         .content_type("application/json")
         .send()
         .await

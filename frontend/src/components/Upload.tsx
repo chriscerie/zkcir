@@ -229,6 +229,7 @@ export default function Upload({
               ? files[entryIndex].name
               : 'Select the entry point from the files list'
           }
+          autoComplete='off'
         />
       </Fieldset>
     </>
