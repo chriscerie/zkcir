@@ -10,11 +10,15 @@ import {
 import { IconGitBranch, IconSettings } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import 'allotment/dist/style.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import * as echarts from 'echarts';
+import ir_view from '../../helpers/ir_view';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
 const CIR = 'cir';
+const AST = 'ast'
+const AST_TREE = 'ast_tree'
 
 export default function IrEditor({
   jsonStr,
@@ -28,6 +32,15 @@ export default function IrEditor({
   const { colorScheme } = useMantineColorScheme();
 
   const [page, setPage] = useState<string | null>(jsonStr ? CIR : COMPILATION);
+  
+  interface TreeNode {
+    name: string;
+    children?: TreeNode[];
+    collapsed?: boolean;
+  }
+
+  const [tree, setTree] = useState<TreeNode | null>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const hasLoaded = !!jsonStr && !!cirStr;
 
@@ -35,17 +48,81 @@ export default function IrEditor({
 
   useEffect(() => {
     if (hasLoaded) {
+      console.log(jsonStr);
+      const parsedTree = ir_view.generateTree(jsonStr); // Make sure this is compatible
+      setTree(parsedTree);
       setActiveIndex(3);
     } else {
+      setTree({ name: 'Circuit', children: [] });
       const interval = setInterval(() => {
         setActiveIndex((prevActive) => (prevActive === 2 ? 3 : 2));
       }, 1000);
 
-      return () => {
-        clearInterval(interval);
-      };
+      return () => clearInterval(interval);
     }
-  }, [hasLoaded]);
+  }, [hasLoaded, jsonStr]);
+
+  useEffect(() => {
+    console.log(page)
+    console.log(!chartRef.current)
+    console.log(tree)
+    if (page !== AST_TREE || !chartRef.current || !tree) {
+      console.log('hi')
+      return;
+      
+    }
+    console.log('hi')
+    
+
+    const myChart = echarts.init(chartRef.current);
+    myChart.showLoading();
+
+
+    myChart.hideLoading();
+    myChart.setOption({
+      tooltip: {
+        trigger: 'item',
+        triggerOn: 'mousemove',
+      },
+      series: [
+        {
+          type: 'tree',
+          data: [tree],
+          top: '1%',
+          left: '7%',
+          bottom: '1%',
+          right: '20%',
+          orient: 'vertical',
+          symbolSize: 10,
+          label: {
+            position: 'left',
+            verticalAlign: 'middle',
+            align: 'right',
+            fontSize: 9,
+          },
+          leaves: {
+            label: {
+              position: 'right',
+              verticalAlign: 'middle',
+              align: 'left',
+            },
+          },
+          emphasis: {
+            focus: 'descendant',
+          },
+          expandAndCollapse: true,
+          animationDuration: 550,
+          animationDurationUpdate: 750,
+        },
+      ],
+    });
+
+    return () => {
+      myChart.dispose();
+    };
+
+  }, [tree, page]);
+  
 
   return (
     <>
@@ -78,6 +155,25 @@ export default function IrEditor({
             disabled={!jsonStr}
           >
             ir.json
+          </Tabs.Tab>
+
+          <Tabs.Tab
+            value={AST}
+            leftSection={
+              <IconSettings style={{ width: rem(12), height: rem(12) }} />
+            }
+            disabled={!jsonStr}
+          >
+            ir.ast
+          </Tabs.Tab>
+          <Tabs.Tab
+            value={AST_TREE}
+            leftSection={
+              <IconSettings style={{ width: rem(12), height: rem(12) }} />
+            }
+            disabled={!jsonStr}
+          >
+            ir.ast_tree
           </Tabs.Tab>
         </Tabs.List>
 
@@ -179,6 +275,14 @@ export default function IrEditor({
           }}
           theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
         />
+      )}
+
+      {(page == AST) && !isLoading && (
+        null
+      )}
+
+      {(page == AST_TREE) && !isLoading && (
+        <div ref={chartRef} style={{ height: '60%', width: '100%', margin:'5%' }}></div>
       )}
     </>
   );

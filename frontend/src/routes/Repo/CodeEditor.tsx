@@ -12,8 +12,6 @@ export default function IrEditor({
 }) {
   const { colorScheme } = useMantineColorScheme();
 
-  console.log(selectedSource?.path);
-
   return (
     <>
       {selectedSource ? (
