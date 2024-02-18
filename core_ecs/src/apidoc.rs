@@ -3,7 +3,7 @@ use utoipa::{
     Modify, OpenApi,
 };
 
-use crate::{auth, ir, profile, repo, ssh, UnauthorizedResponse};
+use crate::{auth, ir, profile, repo, routes::repos, ssh, UnauthorizedResponse};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -16,6 +16,9 @@ use crate::{auth, ir, profile, repo, ssh, UnauthorizedResponse};
         ir::list_ir_versions,
         ir::get_ir_source,
         repo::create_repo,
+        repo::get_repo_metadata,
+        repo::get_repo_source,
+        repos::list_repos,
         ssh::create_key,
         ssh::list_keys,
         ssh::delete_key,
@@ -32,6 +35,9 @@ use crate::{auth, ir, profile, repo, ssh, UnauthorizedResponse};
         ir::ListIrVersionsResponse,
         repo::CreateRepoResponse,
         repo::CreateRepoPayload,
+        repo::GetRepoMetadataResponse,
+        repos::Repository,
+        repos::ListReposResponse,
         ssh::CreateKeyPayload,
         ssh::Key,
         ssh::ListKeysResponse,

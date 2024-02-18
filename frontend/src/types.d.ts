@@ -1,8 +1,12 @@
-export type ListIrsMetadataResponse = {
-  irs: Array<{
-    repo_name: string;
-    description: string;
+export type ListReposResponse = {
+  repos: Array<{
+    name: string;
   }>;
+};
+
+export type GetRepoMetadataResponse = {
+  description: string;
+  clone_url_ssh: string;
 };
 
 export type GetIrResponse = {

@@ -23,7 +23,6 @@ export default function KeyButton({
             padding: '1rem',
             height: 'auto',
           }}
-          key={keyId}
           onClick={copy}
           justify="space-between"
           rightSection={

@@ -28,12 +28,14 @@ import {
   GetIrResponse,
   GetIrSourceResponse,
   GetIrVersionsResponse,
+  GetRepoMetadataResponse,
 } from '../../types';
 import FileNode, { IFileNode } from './FileNode';
 import classes from './index.module.css';
 import IrEditor from './IrEditor';
 import { SelectedSource } from './SelectedSource';
 import CodeEditor from './CodeEditor';
+import CloneAndCompileButtons from './CloneAndCompileButtons';
 
 const mockdata = [
   { icon: IconFiles, label: 'File' },
@@ -69,6 +71,25 @@ export default function Repo() {
 
   const { repo } = useParams();
 
+  const repoMetadataUrl = `https://zkcir.chrisc.dev/v1/repo/metadata/${user?.user?.sub}/${repo}`;
+
+  const { data: metadata } = useQuery<GetRepoMetadataResponse>(
+    repoMetadataUrl,
+    async () => {
+      const response = await fetch(repoMetadataUrl, {
+        headers: {
+          Authorization: `Bearer ${user.user?.auth_token}`,
+        },
+      });
+
+      return response.json();
+    },
+    {
+      enabled: !!user.user,
+      staleTime: Infinity,
+    },
+  );
+
   const getVersionsUrl = `https://zkcir.chrisc.dev/v1/ir/versions/${repo}`;
 
   const {
@@ -88,6 +109,7 @@ export default function Repo() {
     },
     {
       enabled: !!user.user,
+      staleTime: Infinity,
     },
   );
 
@@ -109,7 +131,7 @@ export default function Repo() {
       return response;
     },
     {
-      enabled: !!versions?.versions,
+      enabled: !!versions?.versions && versions?.versions.length > 0,
       staleTime: Infinity,
       refetchInterval: (data) => (data?.status === 200 ? false : 3000),
     },
@@ -119,7 +141,7 @@ export default function Repo() {
     SelectedSource | undefined
   >();
 
-  const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/ir/source/${user.user?.sub}/${repo}/${versions?.versions[0]}`;
+  const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/repo/source/${user.user?.sub}/${repo}`;
 
   const {
     data: irSource,
@@ -203,6 +225,9 @@ export default function Repo() {
       <AppShellMain style={{ height: '100vh' }}>
         <Allotment defaultSizes={[0.9, 2, 2]}>
           <Allotment.Pane>
+            {metadata && (
+              <CloneAndCompileButtons clone_url_ssh={metadata.clone_url_ssh} />
+            )}
             <TreeView
               aria-label="file system navigator"
               defaultCollapseIcon={<IconChevronDown />}

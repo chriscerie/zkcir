@@ -6,9 +6,9 @@ use axum::{
     routing::{delete, get, get_service, post, put},
     Router,
 };
-use routes::profile;
 use routes::{auth, repo};
 use routes::{ir, ssh};
+use routes::{profile, repos};
 use state::AppState;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
@@ -39,6 +39,15 @@ async fn main() {
         .route("/auth/google", get(auth::auth_google))
         .route("/v1/profile", get(profile::get_profile))
         .route("/v1/repo", put(repo::create_repo))
+        .route(
+            "/v1/repo/metadata/:owner/:repo_name",
+            get(repo::get_repo_metadata),
+        )
+        .route(
+            "/v1/repo/source/:owner/:repo_name",
+            get(repo::get_repo_source),
+        )
+        .route("/v1/repos", get(repos::list_repos))
         .route("/v1/ssh", put(ssh::create_key))
         .route("/v1/ssh", get(ssh::list_keys))
         .route("/v1/ssh/:key_id", delete(ssh::delete_key))
