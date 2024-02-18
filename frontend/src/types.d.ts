@@ -7,6 +7,7 @@ export type ListReposResponse = {
 export type GetRepoMetadataResponse = {
   description: string;
   clone_url_ssh: string;
+  latest_commit_id?: string;
 };
 
 export type GetIrResponse = {
