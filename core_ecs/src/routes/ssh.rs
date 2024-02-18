@@ -23,7 +23,7 @@ pub struct CreateKeyPayload {
 
 /// Create SSH key
 #[utoipa::path(put,
-    tag="IR",
+    tag="SSH",
     path="/v1/ssh",
     responses(
         (status = 201, description = "Created key", body = String),
@@ -78,7 +78,7 @@ pub struct ListKeysResponse {
 
 /// List SSH keys
 #[utoipa::path(get,
-    tag="IR",
+    tag="SSH",
     path="/v1/ssh",
     responses(
         (status = 200, description = "Get keys", body = Vec<String>),
@@ -132,9 +132,9 @@ pub async fn list_keys(
         .map_err(AppError::from)
 }
 
-/// Delete key
+/// Delete SSH key
 #[utoipa::path(delete,
-    tag="IR",
+    tag="SSH",
     path="/v1/ssh/:key_id",
     responses(
         (status = 204, description = "Deleted key", body = String),
