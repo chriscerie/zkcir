@@ -13,6 +13,7 @@ import 'allotment/dist/style.css';
 import { useEffect, useState, useRef } from 'react';
 import * as echarts from 'echarts';
 import ir_view from '../../helpers/ir_view';
+import TreeComponent from '../../components/TreeComponent';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
@@ -32,7 +33,7 @@ export default function IrEditor({
   const { colorScheme } = useMantineColorScheme();
 
   const [page, setPage] = useState<string | null>(jsonStr ? CIR : COMPILATION);
-  
+
   interface TreeNode {
     name: string;
     children?: TreeNode[];
@@ -41,6 +42,9 @@ export default function IrEditor({
 
   const [tree, setTree] = useState<TreeNode | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>([]);
+
 
   const hasLoaded = !!jsonStr && !!cirStr;
 
@@ -69,10 +73,10 @@ export default function IrEditor({
     if (page !== AST_TREE || !chartRef.current || !tree) {
       console.log('hi')
       return;
-      
+
     }
     console.log('hi')
-    
+
 
     const myChart = echarts.init(chartRef.current);
     myChart.showLoading();
@@ -122,7 +126,7 @@ export default function IrEditor({
     };
 
   }, [tree, page]);
-  
+
 
   return (
     <>
@@ -278,11 +282,13 @@ export default function IrEditor({
       )}
 
       {(page == AST) && !isLoading && (
-        null
+        <TreeComponent
+          tree={tree}
+        />
       )}
 
       {(page == AST_TREE) && !isLoading && (
-        <div ref={chartRef} style={{ height: '60%', width: '100%', margin:'5%' }}></div>
+        <div ref={chartRef} style={{ height: '60%', width: '100%', margin: '5%' }}></div>
       )}
     </>
   );
