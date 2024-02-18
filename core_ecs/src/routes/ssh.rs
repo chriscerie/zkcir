@@ -125,38 +125,10 @@ pub async fn list_keys(
         })
         .collect::<Vec<_>>();
 
-    let mut keys_with_fingerprint = Vec::new();
-
-    for key in keys {
-        let fingerprint = iam_client
-            .get_ssh_public_key()
-            .user_name(&iam_user.user_name)
-            .ssh_public_key_id(&key.id)
-            .encoding(aws_sdk_iam::types::EncodingType::Ssh)
-            .send()
-            .await
-            .map(|res| {
-                res.ssh_public_key
-                    .map_or("<error>".to_string(), |key| key.fingerprint)
-            })
-            .unwrap_or("<error>".to_string());
-
-        keys_with_fingerprint.push(Key {
-            id: key.id,
-            fingerprint,
-            upload_time: key.upload_time,
-        });
-    }
-
     Response::builder()
         .status(StatusCode::CREATED)
         .header("Content-Type", "application/json")
-        .body(
-            serde_json::to_string(&ListKeysResponse {
-                keys: keys_with_fingerprint,
-            })
-            .map_err(AppError::from)?,
-        )
+        .body(serde_json::to_string(&ListKeysResponse { keys }).map_err(AppError::from)?)
         .map_err(AppError::from)
 }
 

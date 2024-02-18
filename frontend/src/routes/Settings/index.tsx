@@ -62,7 +62,6 @@ export default function Setting() {
             <KeyButton
               key={keyInfo.id}
               keyId={keyInfo.id}
-              fingerprint={''}
               uploadedTime={keyInfo.upload_time}
             />
           ))}

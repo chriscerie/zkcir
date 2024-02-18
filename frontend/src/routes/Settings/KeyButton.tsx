@@ -5,11 +5,9 @@ import { useState } from 'react';
 
 export default function KeyButton({
   keyId,
-  fingerprint,
   uploadedTime,
 }: {
   keyId: string;
-  fingerprint: string;
   uploadedTime: string;
 }) {
   const user = useUser();
@@ -75,9 +73,6 @@ export default function KeyButton({
                   >
                     SSH Key ID
                   </Badge>
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {fingerprint}
                 </Text>
                 <Text size="xs" c="dimmed">
                   {uploadedTime}
