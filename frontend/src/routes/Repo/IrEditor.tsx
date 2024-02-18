@@ -158,7 +158,7 @@ export default function IrEditor({
 
               <Space h="lg" />
 
-              {activeIndex == 3 && (
+              {activeIndex == 3 && jsonStr && (
                 <Button variant="outline" onClick={() => setPage(CIR)}>
                   Go to IR
                 </Button>
