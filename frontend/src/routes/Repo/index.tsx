@@ -1,6 +1,7 @@
 import {
   AppShellMain,
   AppShellNavbar,
+  Loader,
   Stack,
   Tooltip,
   UnstyledButton,
@@ -68,6 +69,8 @@ function NavbarLink({
 
 export default function Repo() {
   const user = useUser();
+
+  const [entryPointPath, setEntryPointPath] = useState<string | undefined>();
 
   const { repo } = useParams();
 
@@ -226,7 +229,10 @@ export default function Repo() {
         <Allotment defaultSizes={[0.9, 2, 2]}>
           <Allotment.Pane>
             {metadata && (
-              <CloneAndCompileButtons clone_url_ssh={metadata.clone_url_ssh} />
+              <CloneAndCompileButtons
+                clone_url_ssh={metadata.clone_url_ssh}
+                entryPointPath={entryPointPath}
+              />
             )}
             <TreeView
               aria-label="file system navigator"
@@ -240,14 +246,41 @@ export default function Repo() {
                     name={name}
                     node={node}
                     path={name}
+                    entryPointPath={entryPointPath}
                     onFileClick={(fileName, path, contents) => {
                       setSelectedSource({ fileName, path, source: contents });
                     }}
                   />
                 ))}
             </TreeView>
+
+            {isSourceLoading && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '80vh',
+                }}
+              >
+                <Loader color="blue" type="dots" />
+              </div>
+            )}
           </Allotment.Pane>
-          <CodeEditor selectedSource={selectedSource} />
+          <CodeEditor
+            selectedSource={selectedSource}
+            isSelectedEntryPoint={
+              entryPointPath ? entryPointPath == selectedSource?.path : false
+            }
+            toggleEntryPoint={() => {
+              setEntryPointPath((prevPath) => {
+                if (prevPath == selectedSource?.path) {
+                  return undefined;
+                }
+                return selectedSource?.path;
+              });
+            }}
+          />
           <IrEditor
             jsonStr={irResponse?.data.json}
             cirStr={irResponse?.data.cir}

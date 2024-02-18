@@ -1,18 +1,33 @@
-import { Tabs, Text, rem, useMantineColorScheme } from '@mantine/core';
-import { IconSettings } from '@tabler/icons-react';
+import {
+  Chip,
+  Group,
+  Tabs,
+  Text,
+  Tooltip,
+  rem,
+  useMantineColorScheme,
+} from '@mantine/core';
+import {
+  IconMapPin,
+  IconMapPinFilled,
+  IconSettings,
+} from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import 'allotment/dist/style.css';
 import { SelectedSource } from './SelectedSource';
 import { getLanguageInfo } from './Languages';
+import { isValidEntryPoint } from './EntryPoint';
 
 export default function IrEditor({
   selectedSource,
+  isSelectedEntryPoint,
+  toggleEntryPoint,
 }: {
   selectedSource?: SelectedSource;
+  isSelectedEntryPoint: boolean;
+  toggleEntryPoint: (entryPoint: boolean) => void;
 }) {
   const { colorScheme } = useMantineColorScheme();
-
-  console.log(selectedSource?.path);
 
   return (
     <>
@@ -36,9 +51,36 @@ export default function IrEditor({
                 padding: '0.2rem 1rem',
               }}
             >
-              <Text size="sm">
-                {selectedSource?.path.split('/').join(' > ')}
-              </Text>
+              <Group>
+                <Tooltip
+                  label={
+                    isValidEntryPoint(selectedSource.path)
+                      ? 'Select as entry point'
+                      : 'Not a recognized entry point'
+                  }
+                  refProp="rootRef"
+                >
+                  <Chip
+                    size="xs"
+                    variant="outline"
+                    checked={isSelectedEntryPoint}
+                    disabled={!isValidEntryPoint(selectedSource.path)}
+                    onChange={toggleEntryPoint}
+                  >
+                    <Group gap="0.2rem">
+                      {isSelectedEntryPoint ? (
+                        <IconMapPinFilled size="0.9rem" />
+                      ) : (
+                        <IconMapPin size="0.9rem" />
+                      )}
+                      Entry point
+                    </Group>
+                  </Chip>
+                </Tooltip>
+                <Text size="sm">
+                  {selectedSource?.path.split('/').join(' > ')}
+                </Text>
+              </Group>
             </Tabs.Panel>
           </Tabs>
           <Editor
