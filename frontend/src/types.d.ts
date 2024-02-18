@@ -1,8 +1,13 @@
-export type ListIrsMetadataResponse = {
-  irs: Array<{
-    repo_name: string;
-    description: string;
+export type ListReposResponse = {
+  repos: Array<{
+    name: string;
   }>;
+};
+
+export type GetRepoMetadataResponse = {
+  description: string;
+  clone_url_ssh: string;
+  latest_commit_id?: string;
 };
 
 export type GetIrResponse = {
@@ -16,3 +21,13 @@ export type GetIrVersionsResponse = {
 };
 
 export type GetIrSourceResponse = Blob;
+
+export type ListKeysResponse = {
+  keys: Array<{
+    id: string;
+    is_active: boolean;
+
+    // ISO 8601 date-time format
+    upload_time: string;
+  }>;
+};

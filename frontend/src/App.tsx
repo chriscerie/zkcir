@@ -14,6 +14,7 @@ import FallbackResetBoundary from './components/FallbackResetBoundary';
 import Repo from './routes/Repo';
 import { AppShell } from '@mantine/core';
 import 'allotment/dist/style.css';
+import Settings from './routes/Settings';
 
 function App() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ function App() {
             <Route path="/json-ir" Component={JsonView} />
             <Route path="/new-circuit" Component={NewCircuit} />
             <Route path="/auth/callback" Component={Auth} />
+            <Route path="/settings" Component={Settings} />
             <Route path="/:owner/:repo" Component={Repo} />
             <Route path="*" Component={NotFound} />
           </Routes>

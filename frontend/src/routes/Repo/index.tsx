@@ -1,6 +1,7 @@
 import {
   AppShellMain,
   AppShellNavbar,
+  Loader,
   Stack,
   Tooltip,
   UnstyledButton,
@@ -28,12 +29,14 @@ import {
   GetIrResponse,
   GetIrSourceResponse,
   GetIrVersionsResponse,
+  GetRepoMetadataResponse,
 } from '../../types';
 import FileNode, { IFileNode } from './FileNode';
 import classes from './index.module.css';
 import IrEditor from './IrEditor';
 import { SelectedSource } from './SelectedSource';
 import CodeEditor from './CodeEditor';
+import CloneAndCompileButtons from './CloneAndCompileButtons';
 
 const mockdata = [
   { icon: IconFiles, label: 'File' },
@@ -67,7 +70,28 @@ function NavbarLink({
 export default function Repo() {
   const user = useUser();
 
+  const [entryPointPath, setEntryPointPath] = useState<string | undefined>();
+
   const { repo } = useParams();
+
+  const repoMetadataUrl = `https://zkcir.chrisc.dev/v1/repo/metadata/${user?.user?.sub}/${repo}`;
+
+  const { data: metadata } = useQuery<GetRepoMetadataResponse>(
+    repoMetadataUrl,
+    async () => {
+      const response = await fetch(repoMetadataUrl, {
+        headers: {
+          Authorization: `Bearer ${user.user?.auth_token}`,
+        },
+      });
+
+      return response.json();
+    },
+    {
+      enabled: !!user.user,
+      staleTime: Infinity,
+    },
+  );
 
   const getVersionsUrl = `https://zkcir.chrisc.dev/v1/ir/versions/${repo}`;
 
@@ -88,6 +112,7 @@ export default function Repo() {
     },
     {
       enabled: !!user.user,
+      staleTime: Infinity,
     },
   );
 
@@ -109,7 +134,7 @@ export default function Repo() {
       return response;
     },
     {
-      enabled: !!versions?.versions,
+      enabled: !!versions?.versions && versions?.versions.length > 0,
       staleTime: Infinity,
       refetchInterval: (data) => (data?.status === 200 ? false : 3000),
     },
@@ -119,13 +144,19 @@ export default function Repo() {
     SelectedSource | undefined
   >();
 
-  const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/ir/source/${user.user?.sub}/${repo}/${versions?.versions[0]}`;
+  const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/repo/source/${user.user?.sub}/${repo}`;
 
   const {
     data: irSource,
     error: irSourceError,
     isLoading: isSourceLoading,
-  } = useQuery<IFileNode, AxiosError>(
+  } = useQuery<
+    {
+      items: IFileNode;
+      downloadUrl: string;
+    },
+    AxiosError
+  >(
     getIrSourceUrl,
     async () => {
       const response = await axios.get<GetIrSourceResponse>(getIrSourceUrl, {
@@ -135,37 +166,42 @@ export default function Repo() {
         responseType: 'blob',
       });
 
+      const downloadUrl = window.URL.createObjectURL(response.data);
+
       const zip = new JSZip();
 
-      return await zip.loadAsync(response.data).then(async (zipFile) => {
-        const items: IFileNode = {};
+      return {
+        items: await zip.loadAsync(response.data).then(async (zipFile) => {
+          const items: IFileNode = {};
 
-        await Promise.all(
-          Object.keys(zipFile.files).map(async (relativePath) => {
-            const file = zipFile.files[relativePath];
-            const pathParts = relativePath.split('/');
+          await Promise.all(
+            Object.keys(zipFile.files).map(async (relativePath) => {
+              const file = zipFile.files[relativePath];
+              const pathParts = relativePath.split('/');
 
-            let current: IFileNode = items;
+              let current: IFileNode = items;
 
-            for (let i = 0; i < pathParts.length; i++) {
-              const isFile = i === pathParts.length - 1;
-              const part = pathParts[i];
-              if (!current[part]) {
-                if (isFile) {
-                  current[part] = await file.async('text');
-                } else {
-                  current[part] = {};
+              for (let i = 0; i < pathParts.length; i++) {
+                const isFile = i === pathParts.length - 1;
+                const part = pathParts[i];
+                if (!current[part]) {
+                  if (isFile) {
+                    current[part] = await file.async('text');
+                  } else {
+                    current[part] = {};
+                  }
+                }
+                if (!isFile) {
+                  current = current[part] as IFileNode;
                 }
               }
-              if (!isFile) {
-                current = current[part] as IFileNode;
-              }
-            }
-          }),
-        );
+            }),
+          );
 
-        return items;
-      });
+          return items;
+        }),
+        downloadUrl: downloadUrl,
+      };
     },
     {
       enabled: !!versions?.versions,
@@ -203,26 +239,63 @@ export default function Repo() {
       <AppShellMain style={{ height: '100vh' }}>
         <Allotment defaultSizes={[0.9, 2, 2]}>
           <Allotment.Pane>
-            <TreeView
-              aria-label="file system navigator"
-              defaultCollapseIcon={<IconChevronDown />}
-              defaultExpandIcon={<IconChevronRight />}
-            >
-              {irSource &&
-                Object.entries(irSource).map(([name, node]) => (
+            {metadata && (
+              <CloneAndCompileButtons
+                clone_url_ssh={metadata.clone_url_ssh}
+                entryPointPath={entryPointPath}
+                onDownloadZip={() => {
+                  window.open(irSource?.downloadUrl, '_blank');
+                }}
+              />
+            )}
+            {irSource && (
+              <TreeView
+                aria-label="file system navigator"
+                defaultCollapseIcon={<IconChevronDown />}
+                defaultExpandIcon={<IconChevronRight />}
+              >
+                {Object.entries(irSource.items).map(([name, node]) => (
                   <FileNode
                     key={name}
                     name={name}
                     node={node}
                     path={name}
+                    entryPointPath={entryPointPath}
                     onFileClick={(fileName, path, contents) => {
                       setSelectedSource({ fileName, path, source: contents });
                     }}
                   />
                 ))}
-            </TreeView>
+              </TreeView>
+            )}
+
+            {isSourceLoading && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '80vh',
+                }}
+              >
+                <Loader color="blue" type="dots" />
+              </div>
+            )}
           </Allotment.Pane>
-          <CodeEditor selectedSource={selectedSource} />
+          <CodeEditor
+            selectedSource={selectedSource}
+            isSelectedEntryPoint={
+              entryPointPath ? entryPointPath == selectedSource?.path : false
+            }
+            toggleEntryPoint={() => {
+              setEntryPointPath((prevPath) => {
+                if (prevPath == selectedSource?.path) {
+                  return undefined;
+                }
+                return selectedSource?.path;
+              });
+            }}
+          />
           <IrEditor
             jsonStr={irResponse?.data.json}
             cirStr={irResponse?.data.cir}

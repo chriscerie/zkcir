@@ -1,22 +1,30 @@
-import Upload, { FormValues } from '../components/Upload';
-import JSZip from 'jszip';
-import { AppShellMain, Button, Container, Group } from '@mantine/core';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import {
+  AppShellMain,
+  Button,
+  Container,
+  Fieldset,
+  Group,
+  TextInput,
+  Textarea,
+} from '@mantine/core';
+import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { IconCode } from '@tabler/icons-react';
-import axios from 'axios';
 import { useUser } from '../UserContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useMutation } from 'react-query';
+
+type FormValues = {
+  repoName?: string;
+  repoDescription?: string;
+};
 
 function NewCircuit() {
   const user = useUser();
 
   const navigate = useNavigate();
 
-  const { register, handleSubmit, watch, setValue, control } =
-    useForm<FormValues>();
-  const files = watch('files', new DataTransfer().files);
+  const { handleSubmit, control } = useForm<FormValues>();
 
   useEffect(() => {
     if (!user.user) {
@@ -24,70 +32,41 @@ function NewCircuit() {
     }
   }, [user.user]);
 
-  const compileMutation = useMutation(
-    (formData: FormData) =>
-      axios.post<{
-        repo_name: string;
-        circuit_version: string;
-      }>('https://zkcir.chrisc.dev/v1/ir', formData, {
+  const newRepoMutation = useMutation(
+    async (repoName: string) => {
+      const res = await fetch('https://zkcir.chrisc.dev/v1/repo', {
+        method: 'PUT',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${user.user?.auth_token}`,
         },
-      }),
+        body: JSON.stringify({ repo_name: repoName }),
+      });
+
+      if (!res.ok) {
+        throw new Error(res.body?.toString());
+      }
+
+      return res.json();
+    },
     {
-      onSuccess: (data) => {
-        navigate(`/${user.user?.sub}/${data.data.repo_name}`);
-      },
       onError: (error) => {
         console.error('Error:', error);
-        alert('Error initiating compilation');
+        alert('Error creating new repository');
+      },
+      onSuccess: (data) => {
+        navigate(`/repo/${data.repo_name}`);
       },
     },
   );
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    const zip = new JSZip();
-
-    // If user drops a project folder, Cargo.toml would be in folder/Cargo.toml, so remove the top layer
-    // If user drops the files directly, Cargo.toml would be at the top level
-    const shouldNotRemoveTopLevelDirectory = Array.from(data.files).some(
-      (file) => file.webkitRelativePath.startsWith('Cargo.toml'),
-    );
-
-    for (const file of data.files) {
-      const normalizedPath = shouldNotRemoveTopLevelDirectory
-        ? file.webkitRelativePath
-        : file.webkitRelativePath.split('/').slice(1).join('/');
-      zip.file(normalizedPath || file.name, file);
-    }
-
-    if (!data.entryIndex) {
-      alert('Please select an entry file');
-      return;
-    }
-
     if (!data.repoName) {
       alert('Please enter a repository name');
       return;
     }
 
-    const nameWithoutExtension = data.files[data.entryIndex].name
-      .split('.')
-      .slice(0, -1)
-      .join('.');
-
-    try {
-      const blob = await zip.generateAsync({ type: 'blob' });
-      const formData = new FormData();
-      formData.append('zip_file', blob, 'Circuit.zip');
-      formData.append('example_artifact', nameWithoutExtension);
-      formData.append('repo_name', data.repoName);
-
-      compileMutation.mutate(formData);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error initiating compilation');
-    }
+    newRepoMutation.mutate(data.repoName);
   };
 
   return (
@@ -98,36 +77,48 @@ function NewCircuit() {
             console.error('Compiling failed:', e);
           })}
         >
-          <Upload
-            files={files}
-            addFiles={(newFiles) => {
-              const filteredFiles = newFiles.filter(
-                (file) =>
-                  !file.webkitRelativePath.includes('target/debug') &&
-                  !file.webkitRelativePath.includes('target/release') &&
-                  !file.webkitRelativePath.includes('.git/'),
-              );
-              const dataTransfer = new DataTransfer();
-              Array.from(files).forEach((file) => dataTransfer.items.add(file));
-              filteredFiles.forEach((file) => dataTransfer.items.add(file));
-              setValue('files', dataTransfer.files, { shouldDirty: true });
-            }}
-            onFileRemove={(index) => {
-              const newFiles = Array.from(files).filter((_, i) => i !== index);
-              const dataTransfer = new DataTransfer();
-              newFiles.forEach((file) => dataTransfer.items.add(file));
-              setValue('files', dataTransfer.files, { shouldDirty: true });
+          <Fieldset
+            legend="Create repository"
+            style={{ marginTop: '1rem' }}
+            radius="md"
+            disabled={newRepoMutation.isLoading}
+          >
+            <Controller
+              render={({ field }) => (
+                <TextInput
+                  {...field}
+                  label="Name"
+                  required
+                  placeholder="my-repository"
+                />
+              )}
+              defaultValue=""
+              name="repoName"
+              control={control}
+              rules={{
+                required: true,
+                pattern: {
+                  value: /^[a-z-]+$/,
+                  message:
+                    'Repository name can only contain lowercase letters and hyphens',
+                },
+              }}
+            />
 
-              if (index === watch('entryIndex')) {
-                setValue('entryIndex', undefined);
-              }
-            }}
-            register={register}
-            entryIndex={watch('entryIndex')}
-            setEntryIndex={(index) => setValue('entryIndex', index)}
-            control={control}
-            isLoading={compileMutation.isLoading}
-          />
+            <Controller
+              render={({ field }) => (
+                <Textarea
+                  {...field}
+                  label="Description"
+                  placeholder="My repository description"
+                />
+              )}
+              defaultValue=""
+              name="repoDescription"
+              control={control}
+            />
+          </Fieldset>
+
           <Group style={{ marginTop: '0.7rem' }}>
             <Button
               variant="filled"
@@ -140,7 +131,7 @@ function NewCircuit() {
                   color: 'white',
                 },
               }}
-              loading={compileMutation.isLoading}
+              loading={newRepoMutation.isLoading}
             >
               Compile
             </Button>
