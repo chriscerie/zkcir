@@ -31,7 +31,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ tree }) => {
     if (tree) {
       const initialIds = generateNodeIds(tree);
       setExpandedNodeIds(initialIds); // Expand all nodes initially
-      console.log(initialIds)
+      console.log(initialIds);
     }
   }, [tree]);
 
@@ -39,7 +39,7 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ tree }) => {
   const renderTree = (node: TreeNode, nodeId: string = '0'): JSX.Element => (
     <TreeItem key={nodeId} nodeId={nodeId} label={node.name}>
       {node.children?.map((child, index) =>
-        renderTree(child, `${nodeId}-${index}`)
+        renderTree(child, `${nodeId}-${index}`),
       )}
     </TreeItem>
   );
@@ -54,7 +54,9 @@ const TreeComponent: React.FC<TreeComponentProps> = ({ tree }) => {
       defaultCollapseIcon={<ExpandMoreIcon />}
       defaultExpandIcon={<ChevronRightIcon />}
       expanded={expandedNodeIds}
-      onNodeToggle={(event: SyntheticEvent, nodeIds: string[]) => setExpandedNodeIds(nodeIds)}
+      onNodeToggle={(event: SyntheticEvent, nodeIds: string[]) =>
+        setExpandedNodeIds(nodeIds)
+      }
     >
       {tree && renderTree(tree)}
     </TreeView>

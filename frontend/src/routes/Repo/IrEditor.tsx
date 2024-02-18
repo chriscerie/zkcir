@@ -11,15 +11,15 @@ import { IconGitBranch, IconSettings } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import 'allotment/dist/style.css';
 import { useEffect, useState, useRef } from 'react';
-import * as echarts from 'echarts';
+import { init } from 'echarts';
 import ir_view from '../../helpers/ir_view';
 import TreeComponent from '../../components/TreeComponent';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
 const CIR = 'cir';
-const AST = 'ast'
-const AST_TREE = 'ast_tree'
+const AST = 'ast';
+const AST_TREE = 'ast_tree';
 
 export default function IrEditor({
   jsonStr,
@@ -43,17 +43,13 @@ export default function IrEditor({
   const [tree, setTree] = useState<TreeNode | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>([]);
-
-
   const hasLoaded = !!jsonStr && !!cirStr;
 
   const [activeIndex, setActiveIndex] = useState(hasLoaded ? 3 : 2);
 
   useEffect(() => {
     if (hasLoaded) {
-      console.log(jsonStr);
-      const parsedTree = ir_view.generateTree(jsonStr); // Make sure this is compatible
+      const parsedTree = ir_view.generateTree(jsonStr);
       setTree(parsedTree);
       setActiveIndex(3);
     } else {
@@ -67,20 +63,12 @@ export default function IrEditor({
   }, [hasLoaded, jsonStr]);
 
   useEffect(() => {
-    console.log(page)
-    console.log(!chartRef.current)
-    console.log(tree)
     if (page !== AST_TREE || !chartRef.current || !tree) {
-      console.log('hi')
       return;
-
     }
-    console.log('hi')
 
-
-    const myChart = echarts.init(chartRef.current);
+    const myChart = init(chartRef.current);
     myChart.showLoading();
-
 
     myChart.hideLoading();
     myChart.setOption({
@@ -124,9 +112,7 @@ export default function IrEditor({
     return () => {
       myChart.dispose();
     };
-
   }, [tree, page]);
-
 
   return (
     <>
@@ -281,14 +267,13 @@ export default function IrEditor({
         />
       )}
 
-      {(page == AST) && !isLoading && (
-        <TreeComponent
-          tree={tree}
-        />
-      )}
+      {page == AST && !isLoading && <TreeComponent tree={tree} />}
 
-      {(page == AST_TREE) && !isLoading && (
-        <div ref={chartRef} style={{ height: '60%', width: '100%', margin: '5%' }}></div>
+      {page == AST_TREE && !isLoading && (
+        <div
+          ref={chartRef}
+          style={{ height: '60%', width: '100%', margin: '5%' }}
+        ></div>
       )}
     </>
   );

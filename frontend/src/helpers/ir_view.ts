@@ -71,7 +71,10 @@ function formatBinaryOperator(node: BinaryOperatorNode): TreeNode {
   const rhsNode = processOperandNode(node.rhs);
   const nodeName = `${node.binop}()`;
   // Apply a type assertion here
-  return createTreeNode(nodeName, [lhsNode, rhsNode].filter(Boolean) as TreeNode[]);
+  return createTreeNode(
+    nodeName,
+    [lhsNode, rhsNode].filter(Boolean) as TreeNode[],
+  );
 }
 
 function processOperandNode(node: OperandNode): TreeNode | null {
@@ -87,7 +90,9 @@ function processOperandNode(node: OperandNode): TreeNode | null {
 
 function processIdentNode(node: IdentNode): TreeNode {
   if (node.VirtualWire) {
-    return createTreeNode(`VW(index: ${node.VirtualWire.index}, value: U64: ${node.VirtualWire.value.U64})`);
+    return createTreeNode(
+      `VW(index: ${node.VirtualWire.index}, value: U64: ${node.VirtualWire.value.U64})`,
+    );
   } else if (node.String) {
     return createTreeNode(node.String);
   }
@@ -98,9 +103,16 @@ function processNode(node: Stmt): TreeNode | null {
   if ('Local' in node) {
     const [first, second] = node.Local;
     // Apply a type assertion here
-    return createTreeNode('Local', [processLocalNode(first), processLocalNode(second)].filter(Boolean) as TreeNode[]);
+    return createTreeNode(
+      'Local',
+      [processLocalNode(first), processLocalNode(second)].filter(
+        Boolean,
+      ) as TreeNode[],
+    );
   } else if ('Verify' in node) {
-    return createTreeNode('Verify', [formatBinaryOperator(node.Verify.BinaryOperator)]);
+    return createTreeNode('Verify', [
+      formatBinaryOperator(node.Verify.BinaryOperator),
+    ]);
   }
   return null; // Fallback for unknown types
 }
