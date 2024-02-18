@@ -150,7 +150,13 @@ export default function Repo() {
     data: irSource,
     error: irSourceError,
     isLoading: isSourceLoading,
-  } = useQuery<IFileNode, AxiosError>(
+  } = useQuery<
+    {
+      items: IFileNode;
+      downloadUrl: string;
+    },
+    AxiosError
+  >(
     getIrSourceUrl,
     async () => {
       const response = await axios.get<GetIrSourceResponse>(getIrSourceUrl, {
@@ -160,37 +166,42 @@ export default function Repo() {
         responseType: 'blob',
       });
 
+      const downloadUrl = window.URL.createObjectURL(response.data);
+
       const zip = new JSZip();
 
-      return await zip.loadAsync(response.data).then(async (zipFile) => {
-        const items: IFileNode = {};
+      return {
+        items: await zip.loadAsync(response.data).then(async (zipFile) => {
+          const items: IFileNode = {};
 
-        await Promise.all(
-          Object.keys(zipFile.files).map(async (relativePath) => {
-            const file = zipFile.files[relativePath];
-            const pathParts = relativePath.split('/');
+          await Promise.all(
+            Object.keys(zipFile.files).map(async (relativePath) => {
+              const file = zipFile.files[relativePath];
+              const pathParts = relativePath.split('/');
 
-            let current: IFileNode = items;
+              let current: IFileNode = items;
 
-            for (let i = 0; i < pathParts.length; i++) {
-              const isFile = i === pathParts.length - 1;
-              const part = pathParts[i];
-              if (!current[part]) {
-                if (isFile) {
-                  current[part] = await file.async('text');
-                } else {
-                  current[part] = {};
+              for (let i = 0; i < pathParts.length; i++) {
+                const isFile = i === pathParts.length - 1;
+                const part = pathParts[i];
+                if (!current[part]) {
+                  if (isFile) {
+                    current[part] = await file.async('text');
+                  } else {
+                    current[part] = {};
+                  }
+                }
+                if (!isFile) {
+                  current = current[part] as IFileNode;
                 }
               }
-              if (!isFile) {
-                current = current[part] as IFileNode;
-              }
-            }
-          }),
-        );
+            }),
+          );
 
-        return items;
-      });
+          return items;
+        }),
+        downloadUrl: downloadUrl,
+      };
     },
     {
       enabled: !!versions?.versions,
@@ -232,15 +243,18 @@ export default function Repo() {
               <CloneAndCompileButtons
                 clone_url_ssh={metadata.clone_url_ssh}
                 entryPointPath={entryPointPath}
+                onDownloadZip={() => {
+                  window.open(irSource?.downloadUrl, '_blank');
+                }}
               />
             )}
-            <TreeView
-              aria-label="file system navigator"
-              defaultCollapseIcon={<IconChevronDown />}
-              defaultExpandIcon={<IconChevronRight />}
-            >
-              {irSource &&
-                Object.entries(irSource).map(([name, node]) => (
+            {irSource && (
+              <TreeView
+                aria-label="file system navigator"
+                defaultCollapseIcon={<IconChevronDown />}
+                defaultExpandIcon={<IconChevronRight />}
+              >
+                {Object.entries(irSource.items).map(([name, node]) => (
                   <FileNode
                     key={name}
                     name={name}
@@ -252,7 +266,8 @@ export default function Repo() {
                     }}
                   />
                 ))}
-            </TreeView>
+              </TreeView>
+            )}
 
             {isSourceLoading && (
               <div

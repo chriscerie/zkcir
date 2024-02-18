@@ -12,17 +12,20 @@ import {
   IconCheck,
   IconCode,
   IconCopy,
-  IconHandFinger,
-  IconMapPin,
+  IconDownload,
+  IconPlayerPlay,
   IconSourceCode,
 } from '@tabler/icons-react';
+import { Link } from 'react-router-dom';
 
 export default function CloneAndCompileButtons({
   clone_url_ssh,
   entryPointPath,
+  onDownloadZip,
 }: {
   clone_url_ssh: string;
   entryPointPath?: string;
+  onDownloadZip: () => void;
 }) {
   return (
     <Popover radius="md" offset={0}>
@@ -85,12 +88,50 @@ export default function CloneAndCompileButtons({
             )}
           </CopyButton>
 
-          <Space h="xs" />
+          <Space h="0.1rem" />
 
-          <Group gap="0.3rem">
-            <IconMapPin size="1.1rem" />
-            <Text fw={600}>Compile</Text>
-          </Group>
+          <Text c="dimmed" size="xs">
+            You must have an SSH key registered.{' '}
+            <Link
+              to="/settings"
+              style={{
+                textDecoration: 'none',
+              }}
+            >
+              See more
+            </Link>
+          </Text>
+
+          <Space h="lg" />
+
+          <Button
+            radius="md"
+            variant="default"
+            style={{
+              padding: '0.3rem 0 0.3rem 0.8rem',
+              height: 'auto',
+            }}
+            justify="left"
+            fullWidth
+            leftSection={
+              <IconDownload
+                size="1.5rem"
+                color={'gray'}
+                style={{ marginRight: '1rem' }}
+              />
+            }
+            onClick={onDownloadZip}
+          >
+            <Group justify="space-between">
+              <Group>
+                <div style={{ textAlign: 'left' }}>
+                  <Text size="sm" fw={600}>
+                    Download ZIP
+                  </Text>
+                </div>
+              </Group>
+            </Group>
+          </Button>
 
           <Space h="xs" />
 
@@ -101,9 +142,10 @@ export default function CloneAndCompileButtons({
               padding: '0.3rem 0 0.3rem 0.8rem',
               height: 'auto',
             }}
-            justify="space-between"
-            rightSection={
-              <IconHandFinger
+            justify="left"
+            fullWidth
+            leftSection={
+              <IconPlayerPlay
                 size="1.5rem"
                 color={'gray'}
                 style={{ marginRight: '1rem' }}
@@ -113,7 +155,12 @@ export default function CloneAndCompileButtons({
             <Group justify="space-between">
               <Group>
                 <div style={{ textAlign: 'left' }}>
-                  <Text size="xs">{entryPointPath || 'none selected'}</Text>
+                  <Text size="sm" fw={600}>
+                    Compile
+                  </Text>
+                  <Text size="xs">
+                    {entryPointPath || 'select entry point'}
+                  </Text>
                 </div>
               </Group>
             </Group>
