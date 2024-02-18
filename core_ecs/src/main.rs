@@ -3,12 +3,12 @@
 #![allow(clippy::too_many_lines)]
 
 use axum::{
-    routing::{get, get_service, post},
+    routing::{delete, get, get_service, post, put},
     Router,
 };
-use routes::auth;
-use routes::ir;
 use routes::profile;
+use routes::{auth, repo};
+use routes::{ir, ssh};
 use state::AppState;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
@@ -18,6 +18,7 @@ use utoipa_redoc::{Redoc, Servable};
 
 mod apidoc;
 mod app_error;
+mod iam;
 mod jwt;
 mod routes;
 mod state;
@@ -37,6 +38,10 @@ async fn main() {
         .merge(Redoc::with_url("/docs", apidoc::ApiDoc::openapi()))
         .route("/auth/google", get(auth::auth_google))
         .route("/v1/profile", get(profile::get_profile))
+        .route("/v1/repo", put(repo::create_repo))
+        .route("/v1/ssh", put(ssh::create_key))
+        .route("/v1/ssh", get(ssh::list_keys))
+        .route("/v1/ssh/:key_id", delete(ssh::delete_key))
         .route("/v1/ir", post(ir::compile_to_ir))
         .route("/v1/ir/:repo_name/:circuit_version", get(ir::get_ir))
         .route("/v1/ir/metadata/list", get(ir::list_irs_metadata))

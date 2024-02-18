@@ -163,16 +163,18 @@ export default function Header() {
                   </UnstyledButton>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Item
-                    leftSection={
-                      <IconSettings
-                        style={{ width: rem(16), height: rem(16) }}
-                        stroke={1.5}
-                      />
-                    }
-                  >
-                    Account settings
-                  </Menu.Item>
+                  <Link to="/settings">
+                    <Menu.Item
+                      leftSection={
+                        <IconSettings
+                          style={{ width: rem(16), height: rem(16) }}
+                          stroke={1.5}
+                        />
+                      }
+                    >
+                      Settings
+                    </Menu.Item>
+                  </Link>
                   <Menu.Item
                     leftSection={
                       <IconLogout

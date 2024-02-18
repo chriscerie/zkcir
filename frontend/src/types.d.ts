@@ -16,3 +16,13 @@ export type GetIrVersionsResponse = {
 };
 
 export type GetIrSourceResponse = Blob;
+
+export type ListKeysResponse = {
+  keys: Array<{
+    id: string;
+    is_active: boolean;
+
+    // ISO 8601 date-time format
+    upload_time: string;
+  }>;
+};

@@ -3,7 +3,7 @@ use utoipa::{
     Modify, OpenApi,
 };
 
-use crate::{auth, ir, profile, UnauthorizedResponse};
+use crate::{auth, ir, profile, repo, ssh, UnauthorizedResponse};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -15,6 +15,10 @@ use crate::{auth, ir, profile, UnauthorizedResponse};
         ir::list_irs_metadata,
         ir::list_ir_versions,
         ir::get_ir_source,
+        repo::create_repo,
+        ssh::create_key,
+        ssh::list_keys,
+        ssh::delete_key,
     ),
     modifiers(&SecurityAddon),
     components(schemas(
@@ -26,6 +30,11 @@ use crate::{auth, ir, profile, UnauthorizedResponse};
         ir::IrMetadata,
         ir::ListIrsMetadataResponse,
         ir::ListIrVersionsResponse,
+        repo::CreateRepoResponse,
+        repo::CreateRepoPayload,
+        ssh::CreateKeyPayload,
+        ssh::Key,
+        ssh::ListKeysResponse,
     )),
     tags(
         (name = "zkcir", description = "Zero Proof Knowledge Circuits IR")

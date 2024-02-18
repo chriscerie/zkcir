@@ -106,14 +106,25 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 	// Permission for ECS to pull docker image from ECR
 	executionRole := awsiam.NewRole(stack, jsii.String("ExecutionRole"), &awsiam.RoleProps{
 		AssumedBy: awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+		ManagedPolicies: &[]awsiam.IManagedPolicy{
+			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonECSTaskExecutionRolePolicy")),
+		},
 	})
-	executionRole.AddManagedPolicy(awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonECSTaskExecutionRolePolicy")))
 	axum_image.Repository().GrantPull(executionRole)
+
+	taskRole := awsiam.NewRole(stack, jsii.String("TaskRole"), &awsiam.RoleProps{
+		AssumedBy: awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+		ManagedPolicies: &[]awsiam.IManagedPolicy{
+			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("IAMFullAccess")),
+			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("AWSCodeCommitFullAccess")),
+		},
+	})
 
 	taskDefinition := awsecs.NewFargateTaskDefinition(stack, jsii.String("TaskDef"), &awsecs.FargateTaskDefinitionProps{
 		MemoryLimitMiB: jsii.Number(2048),
 		Cpu:            jsii.Number(1024),
 		ExecutionRole:  executionRole,
+		TaskRole:       taskRole,
 	})
 
 	container := taskDefinition.AddContainer(jsii.String("AxumContainer"), &awsecs.ContainerDefinitionOptions{
