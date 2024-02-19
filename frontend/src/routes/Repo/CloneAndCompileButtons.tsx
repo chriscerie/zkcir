@@ -16,17 +16,59 @@ import {
   IconPlayerPlay,
   IconSourceCode,
 } from '@tabler/icons-react';
+import { useMutation } from 'react-query';
 import { Link } from 'react-router-dom';
+import { useUser } from '../../UserContext';
 
 export default function CloneAndCompileButtons({
+  repo_name,
+  commit_id,
   clone_url_ssh,
   entryPointPath,
   onDownloadZip,
 }: {
+  repo_name: string;
+  commit_id?: string;
   clone_url_ssh: string;
   entryPointPath?: string;
   onDownloadZip: () => void;
 }) {
+  const user = useUser();
+
+  const parts = entryPointPath?.split('/');
+  const lastPart = parts && parts[parts.length - 1];
+  const entryPointFileWithoutExtension = lastPart
+    ?.split('.')
+    .slice(0, -1)
+    .join('.');
+
+  const compileMutation = useMutation(
+    () => {
+      if (!entryPointFileWithoutExtension) {
+        throw new Error('Need entry point');
+      }
+
+      return fetch(
+        `https://zkcir.chrisc.dev/v1/ir/${user.user?.sub}/${repo_name}/${commit_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.user?.auth_token}`,
+          },
+          body: JSON.stringify({
+            example_artifact: entryPointFileWithoutExtension,
+          }),
+        },
+      );
+    },
+    {
+      onSuccess: () => {
+        close();
+      },
+    },
+  );
+
   return (
     <Popover radius="md" offset={0}>
       <Popover.Target>
@@ -151,6 +193,9 @@ export default function CloneAndCompileButtons({
                 style={{ marginRight: '1rem' }}
               />
             }
+            onClick={() => compileMutation.mutate()}
+            loading={compileMutation.isLoading}
+            disabled={!commit_id}
           >
             <Group justify="space-between">
               <Group>

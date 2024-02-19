@@ -1004,6 +1004,7 @@ dependencies = [
  "axum-extra",
  "chrono",
  "common",
+ "derive_more",
  "if_chain",
  "jsonwebtoken",
  "once_cell",

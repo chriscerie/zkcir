@@ -16,7 +16,7 @@ export default function NewKey() {
   const mutation = useMutation(
     (key: string) => {
       return fetch('https://zkcir.chrisc.dev/v1/ssh', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user.user?.auth_token}`,

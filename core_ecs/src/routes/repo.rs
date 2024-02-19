@@ -16,7 +16,10 @@ use axum_extra::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::{app_error::AppError, iam::upsert_iam_user, jwt, state::AppState, zip::zip_path};
+use crate::{
+    app_error::AppError, codecommit::get_http_clone_url, git::clone_repo, iam::upsert_iam_user,
+    jwt, state::AppState, zip::zip_path,
+};
 
 #[derive(Debug, serde::Serialize, ToSchema)]
 pub struct CreateRepoResponse {
@@ -35,7 +38,7 @@ pub struct CreateRepoPayload {
     visibility: Option<String>,
 }
 
-/// Get IR as JSON
+/// Initiate compilation to IR
 #[utoipa::path(put,
     tag="Repo",
     path="/v1/repo",
@@ -216,59 +219,10 @@ pub async fn get_repo_source(
 
     let repo_full_name = format!("{owner}.{repo_name}");
 
-    let Some(metadata) = codecommit_client
-        .get_repository()
-        .repository_name(&repo_full_name)
-        .send()
-        .await?
-        .repository_metadata
-    else {
-        return Err(AppError::new(
-            StatusCode::NOT_FOUND,
-            "Repository not found".to_string(),
-        ));
-    };
+    let clone_url = get_http_clone_url(codecommit_client, &repo_full_name).await?;
+    let repo_dir = clone_repo(&clone_url)?;
 
-    let Some(clone_url) = metadata.clone_url_http else {
-        return Err(AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Repository does not have a clone url".to_string(),
-        ));
-    };
-
-    let temp_dir = tempfile::tempdir()?;
-
-    let output = std::process::Command::new("git")
-        .arg("clone")
-        .arg(&clone_url)
-        .arg(temp_dir.path())
-        .output()
-        .map_err(|e| {
-            tracing::error!("Failed to execute `git clone`: {:#?}", e);
-            AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to clone repository".to_string(),
-            )
-        })?;
-
-    if !output.status.success() {
-        let error_message = String::from_utf8_lossy(&output.stderr);
-        tracing::error!("`git clone` failed: {}", error_message);
-        return Err(AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to clone repository".to_string(),
-        ));
-    }
-
-    std::fs::remove_dir_all(temp_dir.path().join(".git")).map_err(|e| {
-        tracing::error!("Failed to remove .git directory: {:#?}", e);
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to remove .git directory".to_string(),
-        )
-    })?;
-
-    let zipped_source = zip_path(temp_dir.path())?;
+    let zipped_source = zip_path(repo_dir.path())?;
 
     let mut zipped_source_file = File::open(zipped_source.1).map_err(|e| {
         tracing::error!("Failed to open zip file: {e}");

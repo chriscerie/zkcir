@@ -35,7 +35,7 @@ function NewCircuit() {
   const newRepoMutation = useMutation(
     async (repoName: string) => {
       const res = await fetch('https://zkcir.chrisc.dev/v1/repo', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user.user?.auth_token}`,

@@ -22,9 +22,12 @@ pub struct CreateKeyPayload {
 }
 
 /// Create SSH key
-#[utoipa::path(put,
+#[utoipa::path(post,
     tag="SSH",
     path="/v1/ssh",
+    request_body(
+        content = CreateKeyPayload
+    ),
     responses(
         (status = 201, description = "Created key", body = String),
         (status = 401, description = "Unauthorized", body = UnauthorizedResponse),

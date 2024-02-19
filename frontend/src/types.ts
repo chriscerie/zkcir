@@ -22,6 +22,13 @@ export type GetIrVersionsResponse = {
 
 export type GetIrSourceResponse = Blob;
 
+export enum GetIrStatusResponse {
+  NotStarted = 'NotStarted', // Not actually returned
+  CloningRepository = 'CloningRepository',
+  Compiling = 'Compiling',
+  Completed = 'Completed',
+}
+
 export type ListKeysResponse = {
   keys: Array<{
     id: string;

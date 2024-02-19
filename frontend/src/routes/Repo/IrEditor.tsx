@@ -14,6 +14,7 @@ import { useEffect, useState, useRef } from 'react';
 import { init } from 'echarts';
 import ir_view from '../../helpers/ir_view';
 import TreeComponent from '../../components/TreeComponent';
+import CompilationStatusPage from './CompilationStatusPage';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
@@ -22,10 +23,14 @@ const AST = 'ast';
 const AST_TREE = 'ast_tree';
 
 export default function IrEditor({
+  repo,
+  commit_id,
   jsonStr,
   cirStr,
   isLoading,
 }: {
+  repo: string;
+  commit_id: string;
   jsonStr?: string;
   cirStr?: string;
   isLoading: boolean;
@@ -196,62 +201,12 @@ export default function IrEditor({
       </Tabs>
 
       {page == COMPILATION && !isLoading && (
-        <div
-          style={{
-            padding: '2rem 2rem',
-          }}
-        >
-          <Timeline active={activeIndex} bulletSize={24} lineWidth={2}>
-            <Timeline.Item
-              bullet={<IconGitBranch size={12} />}
-              title="Initiated"
-            >
-              <Text c="dimmed" size="sm">
-                Started compilation
-              </Text>
-              <Text size="xs" mt={4}>
-                2 hours ago
-              </Text>
-            </Timeline.Item>
-
-            <Timeline.Item
-              title="Patched dependencies"
-              bullet={<IconGitBranch size={12} />}
-              lineVariant="dashed"
-            >
-              <Text c="dimmed" size="sm">
-                Found `plonky2`, patched dependencies
-              </Text>
-            </Timeline.Item>
-
-            <Timeline.Item
-              title="Compiling"
-              bullet={<IconGitBranch size={12} />}
-              lineVariant="dashed"
-            >
-              <Text c="dimmed" size="sm">
-                Compiling to intermediate representation
-              </Text>
-            </Timeline.Item>
-
-            <Timeline.Item
-              title="Intermediate Representation"
-              bullet={<IconGitBranch size={12} />}
-            >
-              <Text c="dimmed" size="sm">
-                Finished compiling
-              </Text>
-
-              <Space h="lg" />
-
-              {activeIndex == 3 && jsonStr && (
-                <Button variant="outline" onClick={() => setPage(CIR)}>
-                  Go to IR
-                </Button>
-              )}
-            </Timeline.Item>
-          </Timeline>
-        </div>
+        <CompilationStatusPage
+          repo={repo}
+          commit_id={commit_id}
+          onGoToIr={() => setPage(CIR)}
+          hasIrs={!!jsonStr && !!cirStr}
+        />
       )}
 
       {(page == JSON || page == CIR) && !isLoading && (

@@ -1,6 +1,5 @@
 use aws_sdk_s3::{presigning::PresigningConfig, primitives::ByteStream};
 use axum::{
-    body::Body,
     debug_handler,
     extract::{Path, State},
     http::StatusCode,
@@ -8,29 +7,26 @@ use axum::{
     Json,
 };
 use axum_extra::{
-    extract::Multipart,
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
 use common::{get_parsed_cargo, patch_dependencies, targets::TargetFramework};
+use derive_more::Display;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{
-    env,
-    fs::File,
-    io::Read,
-    process::Command,
-    thread,
-    time::{self, Duration},
-};
-use tempfile::{tempdir, TempDir};
-use tokio::{io::AsyncWriteExt, time::timeout};
+use std::{env, fs::File, io::Read, process::Command, time::Duration};
+use tempfile::TempDir;
+use tokio::time::timeout;
 use utoipa::ToSchema;
-use uuid::{NoContext, Timestamp, Uuid};
-use zip::ZipArchive;
 use zkcir::ir::Cir;
 
-use crate::{app_error::AppError, jwt, state::AppState, zip::zip_path};
+use crate::{
+    app_error::AppError,
+    codecommit::get_http_clone_url,
+    git::clone_repo,
+    jwt::{self},
+    state::AppState,
+};
 
 pub static CIRCUITS_BUCKET_NAME: Lazy<Option<String>> =
     Lazy::new(|| env::var("circuits_bucket").ok());
@@ -38,41 +34,33 @@ pub static CIRCUITS_BUCKET_NAME: Lazy<Option<String>> =
 pub static COMPILE_LAMBDA_ARN: Lazy<Option<String>> =
     Lazy::new(|| env::var("compile_lambda_arn").ok());
 
-#[derive(Deserialize, ToSchema)]
-#[allow(unused)]
-pub struct CompileToIrPayload {
-    /// Zipped file. Requires `cargo.toml` and source files
-    #[schema(format = Binary)]
-    zip_file: Vec<u8>,
+#[derive(Deserialize, ToSchema, Display)]
+pub enum CompilationProgress {
+    #[display(fmt = "CloningRepository")]
+    CloningRepository,
 
+    #[display(fmt = "Compiling")]
+    Compiling,
+
+    #[display(fmt = "Completed")]
+    Completed,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct CompileToIrPayload {
     /// Name of the example artifact to compile. For example, `square_root` for `cargo run --example square_root`
     example_artifact: Option<String>,
-
-    /// Name of the repository to store the circuit in. Must only contain hyphens and lowercase letters
-    /// Reserved keywords: [`metadata`]
-    repo_name: String,
-
-    /// Description of repository. If none provided, will use existing description if updating repository
-    /// or empty string if creating new repository
-    description: Option<String>,
 }
 
-#[derive(Serialize, ToSchema, Clone)]
-pub struct CompileToIrResponse {
-    repo_name: String,
-    circuit_version: String,
-}
-
-/// Compile source to IR
-#[utoipa::path(post,
+/// Initiate compilation to IR
+#[utoipa::path(put,
     tag="IR",
-    path="/v1/ir",
+    path="/v1/ir/{owner}/{repo_name}/{commit_id}",
     request_body(
-        content = CompileToIrPayload,
-        content_type = "multipart/form-data",
+        content = CompileToIrPayload
     ),
     responses(
-        (status = 202, description = "Initiated compilation", body = CompileToIrResponse),
+        (status = 202, description = "Initiated compilation", body = String),
         (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
         (status = 400, description = "Bad request body", body = String),
         (status = 404, description = "Invalid circuit id", body = String),
@@ -85,20 +73,9 @@ pub struct CompileToIrResponse {
 pub async fn compile_to_ir(
     TypedHeader(bearer): TypedHeader<Authorization<Bearer>>,
     State(app_state): State<AppState>,
-    mut multipart: Multipart,
+    Path((owner, repo_name, commit_id)): Path<(String, String, String)>,
+    Json(payload): Json<CompileToIrPayload>,
 ) -> Result<impl IntoResponse, AppError> {
-    let mut example_artifact = None;
-    let mut repo_name = None;
-    let mut description = None;
-
-    let zip_dir = tempdir()?;
-    let mut zip_file_path = None;
-
-    let timestamp_now = Timestamp::now(NoContext);
-    let uuid_now = Uuid::new_v7(timestamp_now).simple().to_string();
-    // Need this because the original string will get moved to coroutine
-    let uuid_now_clone = uuid_now.clone();
-
     let token = bearer
         .token()
         .to_string()
@@ -106,137 +83,11 @@ pub async fn compile_to_ir(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    while let Some(field) = multipart.next_field().await? {
-        let name = field
-            .name()
-            .ok_or(anyhow::anyhow!("Failed to get field name"))?;
-
-        match name {
-            "zip_file" => {
-                let file_name = field
-                    .file_name()
-                    .ok_or(anyhow::anyhow!("Failed to get file name"))?;
-                let path = zip_dir.path().join(file_name);
-                let data = field.bytes().await?;
-                let mut file = tokio::fs::File::create(&path).await?;
-                file.write_all(&data).await?;
-                zip_file_path = Some(path);
-            }
-            "example_artifact" => {
-                let data = field.text().await?;
-                example_artifact = Some(data);
-            }
-            "repo_name" => {
-                let data = field.text().await?;
-
-                if !data.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
-                    return Err(AppError::new(
-                        StatusCode::BAD_REQUEST,
-                        "Invalid repo name formatting".to_string(),
-                    ));
-                }
-
-                if data == "metadata" {
-                    return Err(AppError::new(
-                        StatusCode::BAD_REQUEST,
-                        "Reserved repository name".to_string(),
-                    ));
-                }
-
-                repo_name = Some(data);
-            }
-            "description" => {
-                let data = field.text().await?;
-                description = Some(data);
-            }
-            _ => {
-                return Err(AppError::new(
-                    StatusCode::BAD_REQUEST,
-                    "Unknown field or wrong content type".to_string(),
-                ));
-            }
-        }
-    }
-
-    let repo_name = repo_name.ok_or_else(|| {
-        AppError::new(
-            StatusCode::BAD_REQUEST,
-            "No repo name found in the request".to_string(),
-        )
-    })?;
-
-    // Need this because the original string will get moved to coroutine
-    let repo_name_clone = repo_name.clone();
-
-    let zipped_path = zip_file_path.ok_or_else(|| {
-        AppError::new(
-            StatusCode::BAD_REQUEST,
-            "No zip file found in the request".to_string(),
-        )
-    })?;
-
-    if !zipped_path.is_file() {
+    if user_data.claims.sub != owner {
         return Err(AppError::new(
-            StatusCode::BAD_REQUEST,
-            "Uploaded file is not found or not a file".to_string(),
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
         ));
-    }
-
-    let mut retries = 0;
-    while !is_file_ready(&zipped_path)? {
-        if retries > 5 {
-            return Err(AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to process the file".to_string(),
-            ));
-        }
-        retries += 1;
-    }
-
-    let zip_file = std::fs::File::open(&zipped_path).map_err(|e| {
-        tracing::error!("Failed to open zip file: {e}");
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to open zip file".to_string(),
-        )
-    })?;
-
-    let mut archive = ZipArchive::new(zip_file).map_err(|e| {
-        tracing::error!("Failed to read zip archive: {e}");
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to read zip archive".to_string(),
-        )
-    })?;
-
-    let unzipped_dir = tempdir()?;
-
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let out_path = unzipped_dir
-            .path()
-            .join(file.enclosed_name().ok_or_else(|| {
-                AppError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Unsafe path encountered in zip file".to_string(),
-                )
-            })?);
-
-        if file.is_dir() {
-            std::fs::create_dir_all(&out_path)?;
-        } else {
-            let file_parent = out_path.parent().ok_or_else(|| {
-                AppError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Invalid parent directory encountered when unpacking zip".to_string(),
-                )
-            })?;
-
-            std::fs::create_dir_all(file_parent)?;
-
-            let mut outfile = std::fs::File::create(&out_path)?;
-            std::io::copy(&mut file, &mut outfile)?;
-        }
     }
 
     let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
@@ -246,73 +97,57 @@ pub async fn compile_to_ir(
         )
     })?;
 
-    let zipped_source = zip_path(unzipped_dir.path()).map_err(|e| {
-        tracing::error!("Failed to zip source: {e}");
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal error".to_string(),
-        )
-    })?;
-
-    let mut zipped_source = File::open(&zipped_source.1).map_err(|e| {
-        tracing::error!("Failed to open zip file: {e}");
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal error".to_string(),
-        )
-    })?;
-
-    let mut source_buffer = Vec::new();
-
-    zipped_source.read_to_end(&mut source_buffer).map_err(|e| {
-        tracing::error!("Failed to read zip file: {e}");
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Internal error".to_string(),
-        )
-    })?;
-
     app_state
         .get_s3_client()
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!(
-            "{}/{repo_name}/{uuid_now}/source.zip",
-            user_data.claims.sub
-        ))
-        .body(source_buffer.into())
-        .send()
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to upload to S3: {e}");
-            AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal error".to_string(),
-            )
-        })?;
-
-    app_state
-        .get_s3_client()
-        .put_object()
-        .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/metadata/description.txt",
+            "{}/{repo_name}/{commit_id}/status.txt",
             user_data.claims.sub
         ))
         .body(ByteStream::from(
-            description.unwrap_or_default().into_bytes(),
+            CompilationProgress::CloningRepository
+                .to_string()
+                .into_bytes(),
         ))
         .send()
         .await
         .map_err(|e| {
-            tracing::error!("Failed to upload to S3: {e}");
+            tracing::error!("Failed to upload status to S3: {e}");
             AppError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal error".to_string(),
             )
         })?;
 
-    tracing::info!("Stored source in S3.");
+    let repo_full_name = format!("{owner}.{repo_name}");
+
+    let codecommit_client = app_state.get_codecommit_client();
+
+    let clone_url = get_http_clone_url(codecommit_client, &repo_full_name).await?;
+
+    let unzipped_dir = clone_repo(&clone_url)?;
+
+    app_state
+        .get_s3_client()
+        .put_object()
+        .bucket(circuits_bucket_name)
+        .key(format!(
+            "{}/{repo_name}/{commit_id}/status.txt",
+            user_data.claims.sub
+        ))
+        .body(ByteStream::from(
+            CompilationProgress::Compiling.to_string().into_bytes(),
+        ))
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to upload status to S3: {e}");
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            )
+        })?;
 
     tokio::spawn(async move {
         let result = timeout(
@@ -320,10 +155,10 @@ pub async fn compile_to_ir(
             compile_and_upload(
                 app_state,
                 unzipped_dir,
-                bearer.token().to_string(),
+                owner,
                 repo_name,
-                uuid_now.clone(),
-                example_artifact,
+                commit_id,
+                payload.example_artifact,
             ),
         )
         .await;
@@ -337,23 +172,16 @@ pub async fn compile_to_ir(
 
     Response::builder()
         .status(StatusCode::CREATED)
-        .header("content-type", "application/json")
-        .body(
-            serde_json::to_string(&CompileToIrResponse {
-                repo_name: repo_name_clone,
-                circuit_version: uuid_now_clone,
-            })
-            .map_err(AppError::from)?,
-        )
+        .body("Started compilation".to_string())
         .map_err(AppError::from)
 }
 
 async fn compile_and_upload(
     app_state: AppState,
     unzipped_dir: TempDir,
-    bearer_token: String,
+    owner: String,
     repo_name: String,
-    circuit_version: String,
+    commit_id: String,
     example_artifact: Option<String>,
 ) -> Result<(), String> {
     let unzipped_dir_path = unzipped_dir.path();
@@ -361,10 +189,6 @@ async fn compile_and_upload(
     let circuits_bucket_name = CIRCUITS_BUCKET_NAME
         .as_ref()
         .ok_or_else(|| "Circuits bucket name not found".to_string())?;
-
-    let token = bearer_token.trim_start_matches("Bearer ").to_string();
-    let data =
-        jwt::get_user_claims(&token).map_err(|e| format!("Failed to get user claims: {e}"))?;
 
     let mut parsed_cargo = get_parsed_cargo(&unzipped_dir_path.join("Cargo.toml"))?;
 
@@ -433,10 +257,7 @@ async fn compile_and_upload(
         .get_s3_client()
         .put_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/executable",
-            data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
         .body(executable_buffer.into())
         .send()
         .await
@@ -449,10 +270,7 @@ async fn compile_and_upload(
         .get_s3_client()
         .get_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/executable",
-            data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
         .presigned(
             PresigningConfig::expires_in(Duration::from_secs(60 * 5))
                 .map_err(|e| format!("Failed to create pre-signed URL config: {e}"))?,
@@ -514,10 +332,7 @@ async fn compile_and_upload(
         .get_s3_client()
         .put_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/ir.json",
-            data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/ir.json"))
         .body(ByteStream::from(json_ir_string.into_bytes()))
         .content_type("application/json")
         .send()
@@ -528,26 +343,35 @@ async fn compile_and_upload(
         .get_s3_client()
         .put_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/ir.cir",
-            data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/ir.cir"))
         .body(ByteStream::from(source_ir_string.into_bytes()))
         .content_type("text/plain")
         .send()
         .await
         .map_err(|e| format!("Failed to upload to S3: {e}"))?;
 
+    app_state
+        .get_s3_client()
+        .delete_object()
+        .bucket(circuits_bucket_name)
+        .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to delete executable from S3: {e}"))?;
+
+    app_state
+        .get_s3_client()
+        .put_object()
+        .bucket(circuits_bucket_name)
+        .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
+        .body(ByteStream::from(
+            CompilationProgress::Completed.to_string().into_bytes(),
+        ))
+        .send()
+        .await
+        .map_err(|e| format!("Failed to upload status to S3: {e}"))?;
+
     Ok(())
-}
-
-fn is_file_ready(zip_path: &std::path::Path) -> std::io::Result<bool> {
-    let initial_size = std::fs::metadata(zip_path)?.len();
-
-    thread::sleep(time::Duration::from_secs(1));
-
-    let final_size = std::fs::metadata(zip_path)?.len();
-    Ok(initial_size == final_size)
 }
 
 #[derive(Serialize, ToSchema, Clone)]
@@ -562,12 +386,12 @@ pub struct GetIrResponse {
 /// Get IR
 #[utoipa::path(get,
     tag="IR",
-    path="/v1/ir/{repo_name}/{circuit_version}",
+    path="/v1/ir/{owner}/{repo_name}/{commit_id}",
     responses(
         (status = 200, description = "Got IR", body = GetIrResponse),
         (status = 202, description = "Compilation still in progress", body = String),
         (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
-        (status = 404, description = "Invalid circuit id", body = String),
+        (status = 404, description = "DId not find IR", body = String),
     ),
     security(
         ("token" = [])
@@ -577,7 +401,7 @@ pub struct GetIrResponse {
 pub async fn get_ir(
     TypedHeader(bearer): TypedHeader<Authorization<Bearer>>,
     State(app_state): State<AppState>,
-    Path((repo_name, circuit_version)): Path<(String, String)>,
+    Path((owner, repo_name, commit_id)): Path<(String, String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
     let token = bearer
         .token()
@@ -585,6 +409,13 @@ pub async fn get_ir(
         .trim_start_matches("Bearer ")
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
+
+    if user_data.claims.sub != owner {
+        return Err(AppError::new(
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
+        ));
+    }
 
     let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
         AppError::new(
@@ -597,10 +428,7 @@ pub async fn get_ir(
         .get_s3_client()
         .get_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/ir.json",
-            user_data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/ir.json"))
         .send()
         .await;
 
@@ -608,10 +436,7 @@ pub async fn get_ir(
         .get_s3_client()
         .get_object()
         .bucket(circuits_bucket_name)
-        .key(format!(
-            "{}/{repo_name}/{circuit_version}/ir.cir",
-            user_data.claims.sub
-        ))
+        .key(format!("{owner}/{repo_name}/{commit_id}/ir.cir"))
         .send()
         .await;
 
@@ -656,9 +481,24 @@ pub async fn get_ir(
             .map_err(AppError::from);
     }
 
+    let status = app_state
+        .get_s3_client()
+        .get_object()
+        .bucket(circuits_bucket_name)
+        .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
+        .send()
+        .await;
+
+    if status.is_ok() {
+        return Response::builder()
+            .status(StatusCode::ACCEPTED)
+            .body("Compilation still in progress".to_string())
+            .map_err(AppError::from);
+    }
+
     Response::builder()
-        .status(StatusCode::ACCEPTED)
-        .body("Compilation still in progress".to_string())
+        .status(StatusCode::NOT_FOUND)
+        .body("Could not find IR".to_string())
         .map_err(AppError::from)
 }
 
@@ -671,6 +511,79 @@ pub struct IrMetadata {
 #[derive(Serialize, ToSchema, Clone)]
 pub struct ListIrsMetadataResponse {
     irs: Vec<IrMetadata>,
+}
+
+/// Get compilation status
+// TODO: merge this with the get ir endpoint to prevent split sources of truth
+#[utoipa::path(get,
+    tag="IR",
+    path="/v1/ir/status/{owner}/{repo_name}/{commit_id}",
+    responses(
+        (status = 200, description = "Got status", body = CompilationProgress),
+        (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
+        (status = 404, description = "Invalid circuit id", body = String),
+    ),
+    security(
+        ("token" = [])
+    )
+)]
+#[debug_handler]
+pub async fn get_ir_status(
+    TypedHeader(bearer): TypedHeader<Authorization<Bearer>>,
+    State(app_state): State<AppState>,
+    Path((owner, repo_name, commit_id)): Path<(String, String, String)>,
+) -> Result<impl IntoResponse, AppError> {
+    let token = bearer
+        .token()
+        .to_string()
+        .trim_start_matches("Bearer ")
+        .to_string();
+    let user_data = jwt::get_user_claims(&token)?;
+
+    if user_data.claims.sub != owner {
+        return Err(AppError::new(
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized".to_string(),
+        ));
+    }
+
+    let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Could not get circuits bucket name".to_string(),
+        )
+    })?;
+
+    let status_res = app_state
+        .get_s3_client()
+        .get_object()
+        .bucket(circuits_bucket_name)
+        .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
+        .send()
+        .await
+        .map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to get object from S3".to_string(),
+            )
+        })?;
+
+    let status = status_res.body.collect().await.map_err(|_| {
+        AppError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to read object from S3".to_string(),
+        )
+    })?;
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .body(String::from_utf8(status.to_vec()).map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to convert status to string".to_string(),
+            )
+        })?)
+        .map_err(AppError::from)
 }
 
 /// List IRs
@@ -834,60 +747,4 @@ pub async fn list_ir_versions(
     versions.reverse();
 
     Ok(Json(ListIrVersionsResponse { versions }))
-}
-
-/// Get IR source as zip
-#[utoipa::path(get,
-    tag="IR",
-    path="/v1/ir/source/{owner}/{repo_name}/{circuit_version}",
-    responses(
-        (status = 200, description = "Got source", body = Vec<u8>, content_type = "application/zip"),
-        (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
-        (status = 404, description = "Invalid circuit id", body = String),
-    ),
-    security(
-        ("token" = [])
-    )
-)]
-#[debug_handler]
-pub async fn get_ir_source(
-    TypedHeader(_bearer): TypedHeader<Authorization<Bearer>>,
-    State(app_state): State<AppState>,
-    Path((owner, repo_name, circuit_version)): Path<(String, String, String)>,
-) -> Result<impl IntoResponse, AppError> {
-    // TODO: check if user has access to the repo
-
-    let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Could not get circuits bucket name".to_string(),
-        )
-    })?;
-
-    let source = app_state
-        .get_s3_client()
-        .get_object()
-        .bucket(circuits_bucket_name)
-        .key(format!("{owner}/{repo_name}/{circuit_version}/source.zip"))
-        .send()
-        .await
-        .map_err(|_| {
-            AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get source from S3".to_string(),
-            )
-        })?;
-
-    let source = source.body.collect().await.map_err(|_| {
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to read source from S3".to_string(),
-        )
-    })?;
-
-    Response::builder()
-        .status(StatusCode::OK)
-        .header("content-type", "application/zip")
-        .body(Body::from(source.into_bytes()))
-        .map_err(AppError::from)
 }

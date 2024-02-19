@@ -35,3 +35,4 @@ common = { path = "../common" }
 zkcir = { version = "0.1.0", path = "../zkcir" }
 aws-sdk-iam = "1.13.0"
 aws-sdk-codecommit = "1.13.0"
+derive_more = "0.99.17"

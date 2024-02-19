@@ -24,11 +24,9 @@ import 'allotment/dist/style.css';
 import { TreeView } from '@mui/x-tree-view';
 import JSZip from 'jszip';
 import { useUser } from '../../UserContext';
-import NotFound from '../NotFound';
 import {
   GetIrResponse,
   GetIrSourceResponse,
-  GetIrVersionsResponse,
   GetRepoMetadataResponse,
 } from '../../types';
 import FileNode, { IFileNode } from './FileNode';
@@ -93,30 +91,7 @@ export default function Repo() {
     },
   );
 
-  const getVersionsUrl = `https://zkcir.chrisc.dev/v1/ir/versions/${repo}`;
-
-  const {
-    data: versions,
-    error: versionsError,
-    isLoading: isVersionsLoading,
-  } = useQuery<GetIrVersionsResponse, AxiosError>(
-    getVersionsUrl,
-    async () => {
-      const response = await axios.get<GetIrVersionsResponse>(getVersionsUrl, {
-        headers: {
-          Authorization: `Bearer ${user.user?.auth_token}`,
-        },
-      });
-
-      return response.data;
-    },
-    {
-      enabled: !!user.user,
-      staleTime: Infinity,
-    },
-  );
-
-  const getIrUrl = `https://zkcir.chrisc.dev/v1/ir/${repo}/${versions?.versions[0]}`;
+  const getIrUrl = `https://zkcir.chrisc.dev/v1/ir/${user.user?.sub}/${repo}/${metadata?.latest_commit_id}`;
 
   const {
     data: irResponse,
@@ -134,7 +109,7 @@ export default function Repo() {
       return response;
     },
     {
-      enabled: !!versions?.versions && versions?.versions.length > 0,
+      enabled: !!metadata?.latest_commit_id,
       staleTime: Infinity,
       refetchInterval: (data) => (data?.status === 200 ? false : 3000),
     },
@@ -204,16 +179,11 @@ export default function Repo() {
       };
     },
     {
-      enabled: !!versions?.versions,
       staleTime: Infinity,
     },
   );
 
   const [active, setActive] = useState(2);
-
-  if (versionsError?.status === 404) {
-    return <NotFound />;
-  }
 
   return (
     <>
@@ -241,6 +211,8 @@ export default function Repo() {
           <Allotment.Pane>
             {metadata && (
               <CloneAndCompileButtons
+                repo_name={repo || ''}
+                commit_id={metadata.latest_commit_id}
                 clone_url_ssh={metadata.clone_url_ssh}
                 entryPointPath={entryPointPath}
                 onDownloadZip={() => {
@@ -297,9 +269,11 @@ export default function Repo() {
             }}
           />
           <IrEditor
+            repo={repo || ''}
+            commit_id={metadata?.latest_commit_id || ''}
             jsonStr={irResponse?.data.json}
             cirStr={irResponse?.data.cir}
-            isLoading={isVersionsLoading || isSourceLoading || isIrLoading}
+            isLoading={isSourceLoading || isIrLoading}
           />
         </Allotment>
       </AppShellMain>
