@@ -73,13 +73,13 @@ export default function Home() {
                   gradient={{ from: 'blue', to: 'cyan' }}
                   inherit
                 >
-                  framework-agnostic
+                  universal
                 </Text>{' '}
-                ZK proof circuit intermediate representation compiler
+                platform for writing, compiling, and auditing ZK circuits
               </h1>
 
               <Text className={classes.description} c="dimmed">
-                Generate intermediate representations for zero knowledge proof
+                Generate intermediate representations for zero knowledge
                 circuits to help analyze and find security flaws over a
                 framework-agnostic environment.
               </Text>
