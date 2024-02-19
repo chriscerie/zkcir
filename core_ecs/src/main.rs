@@ -2,6 +2,7 @@
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::too_many_lines)]
 
+use aws_config::{BehaviorVersion, Region};
 use axum::{
     routing::{delete, get, get_service, post, put},
     Router,
@@ -30,7 +31,10 @@ mod zip;
 async fn main() {
     tracing_subscriber::fmt().with_ansi(false).init();
 
-    let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+    let aws_config = aws_config::defaults(BehaviorVersion::latest())
+        .region(Region::new("us-east-1"))
+        .load()
+        .await;
     let app_state = AppState::new(aws_config);
 
     let static_files =

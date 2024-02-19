@@ -102,9 +102,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.79"
+version = "1.0.80"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
+checksum = "5ad32ce52e4161730f7098c077cd2ed6229b5804ccf99e5366be1ab72a98b4e1"
 
 [[package]]
 name = "async-stream"
@@ -288,9 +288,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-lambda"
-version = "1.13.0"
+version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b6253a6dd3ed34c605408deb75ebc9e655f97ede58930c9c6324a5aea72183e"
+checksum = "db5f9f74666bfb9493ed8cf0088e8d021a9e7aadaa7e52f44db402676ba0f244"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",

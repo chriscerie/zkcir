@@ -80,7 +80,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 			},
 			{
 				Name:       jsii.String("private"),
-				SubnetType: awsec2.SubnetType_PRIVATE_WITH_NAT,
+				SubnetType: awsec2.SubnetType_PRIVATE_WITH_EGRESS,
 			},
 		},
 		GatewayEndpoints: &map[string]*awsec2.GatewayVpcEndpointOptions{
@@ -103,9 +103,22 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 		Vpc: vpc,
 	})
 
+	autoScalingGroup := cluster.AddCapacity(jsii.String("AutoScalingGroup"), &awsecs.AddCapacityOptions{
+		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_MEDIUM),
+		MachineImage: awsecs.EcsOptimizedImage_AmazonLinux2023(awsecs.AmiHardwareType_STANDARD, nil),
+
+		// At least 2 for graceful deployments that don't drop existing instances
+		MaxCapacity: jsii.Number(4),
+	})
+	autoScalingGroup.Role().AddManagedPolicy(awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonEC2ContainerServiceforEC2Role")))
+
 	// Permission for ECS to pull docker image from ECR
 	executionRole := awsiam.NewRole(stack, jsii.String("ExecutionRole"), &awsiam.RoleProps{
-		AssumedBy: awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+		AssumedBy: awsiam.NewCompositePrincipal(
+			awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+			awsiam.NewServicePrincipal(jsii.String("ecs.amazonaws.com"), nil),
+			awsiam.NewServicePrincipal(jsii.String("ec2.amazonaws.com"), nil),
+		),
 		ManagedPolicies: &[]awsiam.IManagedPolicy{
 			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonECSTaskExecutionRolePolicy")),
 		},
@@ -113,18 +126,21 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 	axum_image.Repository().GrantPull(executionRole)
 
 	taskRole := awsiam.NewRole(stack, jsii.String("TaskRole"), &awsiam.RoleProps{
-		AssumedBy: awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+		AssumedBy: awsiam.NewCompositePrincipal(
+			awsiam.NewServicePrincipal(jsii.String("ecs-tasks.amazonaws.com"), nil),
+			awsiam.NewServicePrincipal(jsii.String("ecs.amazonaws.com"), nil),
+			awsiam.NewServicePrincipal(jsii.String("ec2.amazonaws.com"), nil),
+		),
 		ManagedPolicies: &[]awsiam.IManagedPolicy{
 			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("IAMFullAccess")),
 			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("AWSCodeCommitFullAccess")),
 		},
 	})
 
-	taskDefinition := awsecs.NewFargateTaskDefinition(stack, jsii.String("TaskDef"), &awsecs.FargateTaskDefinitionProps{
-		MemoryLimitMiB: jsii.Number(2048),
-		Cpu:            jsii.Number(1024),
-		ExecutionRole:  executionRole,
-		TaskRole:       taskRole,
+	taskDefinition := awsecs.NewEc2TaskDefinition(stack, jsii.String("MyTaskDefinition"), &awsecs.Ec2TaskDefinitionProps{
+		ExecutionRole: executionRole,
+		TaskRole:      taskRole,
+		NetworkMode:   awsecs.NetworkMode_AWS_VPC,
 	})
 
 	container := taskDefinition.AddContainer(jsii.String("AxumContainer"), &awsecs.ContainerDefinitionOptions{
@@ -133,7 +149,15 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 			StreamPrefix: jsii.String("Service"),
 			LogRetention: awslogs.RetentionDays_ONE_WEEK,
 		}),
+		MemoryReservationMiB: jsii.Number(1024),
+		Cpu:                  jsii.Number(1024),
 	})
+
+	ec2Service := awsecs.NewEc2Service(stack, jsii.String("MyService"), &awsecs.Ec2ServiceProps{
+		Cluster:        cluster,
+		TaskDefinition: taskDefinition,
+	})
+	ec2Service.TaskDefinition().GrantRun(taskRole)
 
 	compileLambda := awslambda.NewFunction(stack, jsii.String("CompileLambda"), &awslambda.FunctionProps{
 		Code: awslambda.Code_FromAssetImage(jsii.String(".."), &awslambda.AssetImageCodeProps{
@@ -142,7 +166,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 		}),
 		Handler:              awslambda.Handler_FROM_IMAGE(),
 		Runtime:              awslambda.Runtime_FROM_IMAGE(),
-		MemorySize:           jsii.Number(1024),
+		MemorySize:           jsii.Number(2048),
 		EphemeralStorageSize: awscdk.Size_Gibibytes(jsii.Number(2)),
 		LogRetention:         awslogs.RetentionDays_ONE_WEEK,
 		Timeout:              awscdk.Duration_Seconds(jsii.Number(30)),
@@ -152,11 +176,6 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 
 	container.AddPortMappings(&awsecs.PortMapping{
 		ContainerPort: jsii.Number(3000),
-	})
-
-	fargateService := awsecs.NewFargateService(stack, jsii.String("Service"), &awsecs.FargateServiceProps{
-		Cluster:        cluster,
-		TaskDefinition: taskDefinition,
 	})
 
 	lb := awselasticloadbalancingv2.NewApplicationLoadBalancer(stack, jsii.String("ALB"), &awselasticloadbalancingv2.ApplicationLoadBalancerProps{
@@ -173,7 +192,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 
 	httpsListener.AddTargets(jsii.String("ECSHttps"), &awselasticloadbalancingv2.AddApplicationTargetsProps{
 		Port:     jsii.Number(3000),
-		Targets:  &[]awselasticloadbalancingv2.IApplicationLoadBalancerTarget{fargateService},
+		Targets:  &[]awselasticloadbalancingv2.IApplicationLoadBalancerTarget{ec2Service},
 		Protocol: awselasticloadbalancingv2.ApplicationProtocol_HTTP,
 	})
 
