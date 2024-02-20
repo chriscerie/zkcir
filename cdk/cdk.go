@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk/v2"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsautoscaling"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscertificatemanager"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscognito"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
@@ -104,13 +105,17 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 	})
 
 	autoScalingGroup := cluster.AddCapacity(jsii.String("AutoScalingGroup"), &awsecs.AddCapacityOptions{
-		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_MEDIUM),
+		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_SMALL),
 		MachineImage: awsecs.EcsOptimizedImage_AmazonLinux2023(awsecs.AmiHardwareType_STANDARD, nil),
 
-		// At least 2 for graceful deployments that don't drop existing instances
+		MinCapacity: jsii.Number(2),
 		MaxCapacity: jsii.Number(4),
 	})
 	autoScalingGroup.Role().AddManagedPolicy(awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonEC2ContainerServiceforEC2Role")))
+
+	autoScalingGroup.ScaleOnCpuUtilization(jsii.String("CpuScaling"), &awsautoscaling.CpuUtilizationScalingProps{
+		TargetUtilizationPercent: jsii.Number(50),
+	})
 
 	// Permission for ECS to pull docker image from ECR
 	executionRole := awsiam.NewRole(stack, jsii.String("ExecutionRole"), &awsiam.RoleProps{
@@ -149,8 +154,10 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 			StreamPrefix: jsii.String("Service"),
 			LogRetention: awslogs.RetentionDays_ONE_WEEK,
 		}),
-		MemoryReservationMiB: jsii.Number(1024),
-		Cpu:                  jsii.Number(1024),
+		// Memory reserved should be less than half ec2 instance memory to allow rolling updates. Alternatively lower
+		// max healthy percent to 100%
+		MemoryReservationMiB: jsii.Number(800),
+		Cpu:                  jsii.Number(2048),
 	})
 
 	ec2Service := awsecs.NewEc2Service(stack, jsii.String("MyService"), &awsecs.Ec2ServiceProps{
