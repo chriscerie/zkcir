@@ -1,9 +1,6 @@
 import { Button, Space, Text, Timeline } from '@mantine/core';
 import { IconGitBranch } from '@tabler/icons-react';
 import 'allotment/dist/style.css';
-import { AxiosError } from 'axios';
-import { useQuery } from 'react-query';
-import { useUser } from '../../UserContext';
 import { GetIrStatusResponse } from '../../types';
 
 const statusToIndex: { [key in GetIrStatusResponse]: number } = {
@@ -14,50 +11,17 @@ const statusToIndex: { [key in GetIrStatusResponse]: number } = {
 };
 
 export default function IrEditor({
-  repo,
-  commit_id,
   onGoToIr,
-  hasIrs,
+  status,
 }: {
-  repo: string;
-  commit_id: string;
   onGoToIr: () => void;
-  hasIrs: boolean;
+  status?: GetIrStatusResponse;
 }) {
-  const user = useUser();
-
-  const getIrSourceUrl = `https://zkcir.chrisc.dev/v1/ir/status/${user.user?.sub}/${repo}/${commit_id}`;
-
-  const { data: irStatus, isLoading: irIrStatusLoading } = useQuery<
-    GetIrStatusResponse,
-    AxiosError
-  >(getIrSourceUrl, async () => {
-    const response = await fetch(getIrSourceUrl, {
-      headers: {
-        Authorization: `Bearer ${user.user?.auth_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status == 500) {
-        return GetIrStatusResponse.NotStarted;
-      }
-      throw new Error('Error encountered');
-    }
-
-    const responseText = await response.text();
-
-    return responseText as GetIrStatusResponse;
-  });
-
-  // Status endpoint also returns the result, but if if fetching ir wins race condition, sync the statuses
-  const syncedIrStatus = hasIrs ? GetIrStatusResponse.Completed : irStatus;
-
-  if (irIrStatusLoading) {
+  if (!status) {
     return <div>Loading...</div>;
   }
 
-  const index = irStatus ? statusToIndex[irStatus] : 0;
+  const index = statusToIndex[status];
 
   return (
     <div
@@ -105,7 +69,7 @@ export default function IrEditor({
 
           <Space h="lg" />
 
-          {syncedIrStatus == GetIrStatusResponse.Completed && (
+          {status == GetIrStatusResponse.Completed && (
             <Button variant="outline" onClick={() => onGoToIr()}>
               Go to IR
             </Button>

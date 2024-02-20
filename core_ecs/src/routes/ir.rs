@@ -14,7 +14,7 @@ use common::{get_parsed_cargo, patch_dependencies, targets::TargetFramework};
 use derive_more::Display;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{env, fs::File, io::Read, process::Command, time::Duration};
+use std::{env, fs::File, io::Read, process::Command, str::FromStr, time::Duration};
 use tempfile::TempDir;
 use tokio::time::timeout;
 use utoipa::ToSchema;
@@ -34,8 +34,11 @@ pub static CIRCUITS_BUCKET_NAME: Lazy<Option<String>> =
 pub static COMPILE_LAMBDA_ARN: Lazy<Option<String>> =
     Lazy::new(|| env::var("compile_lambda_arn").ok());
 
-#[derive(Deserialize, ToSchema, Display)]
+#[derive(Serialize, Deserialize, ToSchema, Display, Clone)]
 pub enum CompilationProgress {
+    #[display(fmt = "CloningRepository")]
+    NotStarted,
+
     #[display(fmt = "CloningRepository")]
     CloningRepository,
 
@@ -44,6 +47,20 @@ pub enum CompilationProgress {
 
     #[display(fmt = "Completed")]
     Completed,
+}
+
+impl FromStr for CompilationProgress {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NotStarted" => Ok(CompilationProgress::NotStarted),
+            "CloningRepository" => Ok(CompilationProgress::CloningRepository),
+            "Compiling" => Ok(CompilationProgress::Compiling),
+            "Completed" => Ok(CompilationProgress::Completed),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -376,11 +393,14 @@ async fn compile_and_upload(
 
 #[derive(Serialize, ToSchema, Clone)]
 pub struct GetIrResponse {
-    /// IR as JSON
-    json: String,
+    /// IR as JSON if compiled
+    json: Option<String>,
 
-    /// IR as CIR
-    cir: String,
+    /// IR as CIR if compiled
+    cir: Option<String>,
+
+    /// StatusCode
+    status: CompilationProgress,
 }
 
 /// Get IR
@@ -471,10 +491,12 @@ pub async fn get_ir(
 
         return Response::builder()
             .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
             .body(
                 serde_json::to_string(&GetIrResponse {
-                    json: ir_json_string,
-                    cir: ir_cir_string,
+                    json: Some(ir_json_string),
+                    cir: Some(ir_cir_string),
+                    status: CompilationProgress::Completed,
                 })
                 .map_err(AppError::from)?,
             )
@@ -489,16 +511,51 @@ pub async fn get_ir(
         .send()
         .await;
 
-    if status.is_ok() {
+    if let Ok(status) = status {
+        let status_bytes = status.body.collect().await.map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to read status from S3".to_string(),
+            )
+        })?;
+
+        let status_string = String::from_utf8(status_bytes.to_vec()).map_err(|_| {
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to convert status to string".to_string(),
+            )
+        })?;
+
         return Response::builder()
-            .status(StatusCode::ACCEPTED)
-            .body("Compilation still in progress".to_string())
+            .status(StatusCode::OK)
+            .header("Content-Type", "application/json")
+            .body(
+                serde_json::to_string(&GetIrResponse {
+                    json: None,
+                    cir: None,
+                    status: status_string.parse().map_err(|()| {
+                        AppError::new(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Failed to parse status".to_string(),
+                        )
+                    })?,
+                })
+                .map_err(AppError::from)?,
+            )
             .map_err(AppError::from);
     }
 
     Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body("Could not find IR".to_string())
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .body(
+            serde_json::to_string(&GetIrResponse {
+                json: None,
+                cir: None,
+                status: CompilationProgress::NotStarted,
+            })
+            .map_err(AppError::from)?,
+        )
         .map_err(AppError::from)
 }
 
@@ -511,79 +568,6 @@ pub struct IrMetadata {
 #[derive(Serialize, ToSchema, Clone)]
 pub struct ListIrsMetadataResponse {
     irs: Vec<IrMetadata>,
-}
-
-/// Get compilation status
-// TODO: merge this with the get ir endpoint to prevent split sources of truth
-#[utoipa::path(get,
-    tag="IR",
-    path="/v1/ir/status/{owner}/{repo_name}/{commit_id}",
-    responses(
-        (status = 200, description = "Got status", body = CompilationProgress),
-        (status = 401, description = "Unauthorized", body = UnauthorizedResponse),
-        (status = 404, description = "Invalid circuit id", body = String),
-    ),
-    security(
-        ("token" = [])
-    )
-)]
-#[debug_handler]
-pub async fn get_ir_status(
-    TypedHeader(bearer): TypedHeader<Authorization<Bearer>>,
-    State(app_state): State<AppState>,
-    Path((owner, repo_name, commit_id)): Path<(String, String, String)>,
-) -> Result<impl IntoResponse, AppError> {
-    let token = bearer
-        .token()
-        .to_string()
-        .trim_start_matches("Bearer ")
-        .to_string();
-    let user_data = jwt::get_user_claims(&token)?;
-
-    if user_data.claims.sub != owner {
-        return Err(AppError::new(
-            StatusCode::UNAUTHORIZED,
-            "Unauthorized".to_string(),
-        ));
-    }
-
-    let circuits_bucket_name = CIRCUITS_BUCKET_NAME.as_ref().ok_or_else(|| {
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Could not get circuits bucket name".to_string(),
-        )
-    })?;
-
-    let status_res = app_state
-        .get_s3_client()
-        .get_object()
-        .bucket(circuits_bucket_name)
-        .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
-        .send()
-        .await
-        .map_err(|_| {
-            AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to get object from S3".to_string(),
-            )
-        })?;
-
-    let status = status_res.body.collect().await.map_err(|_| {
-        AppError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to read object from S3".to_string(),
-        )
-    })?;
-
-    Response::builder()
-        .status(StatusCode::OK)
-        .body(String::from_utf8(status.to_vec()).map_err(|_| {
-            AppError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to convert status to string".to_string(),
-            )
-        })?)
-        .map_err(AppError::from)
 }
 
 /// List IRs

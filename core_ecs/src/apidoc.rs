@@ -12,7 +12,6 @@ use crate::{auth, ir, profile, repo, routes::repos, ssh, UnauthorizedResponse};
         profile::get_profile,
         ir::compile_to_ir,
         ir::get_ir,
-        ir::get_ir_status,
         ir::list_irs_metadata,
         ir::list_ir_versions,
         repo::create_repo,

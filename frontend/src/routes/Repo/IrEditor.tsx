@@ -1,13 +1,5 @@
-import {
-  Button,
-  Space,
-  Tabs,
-  Text,
-  Timeline,
-  rem,
-  useMantineColorScheme,
-} from '@mantine/core';
-import { IconGitBranch, IconSettings } from '@tabler/icons-react';
+import { Tabs, Text, rem, useMantineColorScheme } from '@mantine/core';
+import { IconSettings } from '@tabler/icons-react';
 import { Editor } from '@monaco-editor/react';
 import 'allotment/dist/style.css';
 import { useEffect, useState, useRef } from 'react';
@@ -15,6 +7,7 @@ import { init } from 'echarts';
 import ir_view from '../../helpers/ir_view';
 import TreeComponent from '../../components/TreeComponent';
 import CompilationStatusPage from './CompilationStatusPage';
+import { GetIrStatusResponse } from '../../types';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
@@ -23,17 +16,15 @@ const AST = 'ast';
 const AST_TREE = 'ast_tree';
 
 export default function IrEditor({
-  repo,
-  commit_id,
   jsonStr,
   cirStr,
   isLoading,
+  status,
 }: {
-  repo: string;
-  commit_id: string;
   jsonStr?: string;
   cirStr?: string;
   isLoading: boolean;
+  status?: GetIrStatusResponse;
 }) {
   const { colorScheme } = useMantineColorScheme();
 
@@ -50,20 +41,12 @@ export default function IrEditor({
 
   const hasLoaded = !!jsonStr && !!cirStr;
 
-  const [activeIndex, setActiveIndex] = useState(hasLoaded ? 3 : 2);
-
   useEffect(() => {
     if (hasLoaded) {
       const parsedTree = ir_view.generateTree(jsonStr);
       setTree(parsedTree);
-      setActiveIndex(3);
     } else {
       setTree({ name: 'Circuit', children: [] });
-      const interval = setInterval(() => {
-        setActiveIndex((prevActive) => (prevActive === 2 ? 3 : 2));
-      }, 1000);
-
-      return () => clearInterval(interval);
     }
   }, [hasLoaded, jsonStr]);
 
@@ -201,12 +184,7 @@ export default function IrEditor({
       </Tabs>
 
       {page == COMPILATION && !isLoading && (
-        <CompilationStatusPage
-          repo={repo}
-          commit_id={commit_id}
-          onGoToIr={() => setPage(CIR)}
-          hasIrs={!!jsonStr && !!cirStr}
-        />
+        <CompilationStatusPage onGoToIr={() => setPage(CIR)} status={status} />
       )}
 
       {(page == JSON || page == CIR) && !isLoading && (

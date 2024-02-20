@@ -11,8 +11,9 @@ export type GetRepoMetadataResponse = {
 };
 
 export type GetIrResponse = {
-  json: string;
-  cir: string;
+  json?: string;
+  cir?: string;
+  status: GetIrStatusResponse;
 };
 
 export type GetIrVersionsResponse = {

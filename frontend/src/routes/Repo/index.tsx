@@ -27,6 +27,7 @@ import { useUser } from '../../UserContext';
 import {
   GetIrResponse,
   GetIrSourceResponse,
+  GetIrStatusResponse,
   GetRepoMetadataResponse,
 } from '../../types';
 import FileNode, { IFileNode } from './FileNode';
@@ -111,7 +112,8 @@ export default function Repo() {
     {
       enabled: !!metadata?.latest_commit_id,
       staleTime: Infinity,
-      refetchInterval: (data) => (data?.status === 200 ? false : 3000),
+      refetchInterval: (data) =>
+        data?.data.status === GetIrStatusResponse.Completed ? false : 3000,
     },
   );
 
@@ -269,10 +271,9 @@ export default function Repo() {
             }}
           />
           <IrEditor
-            repo={repo || ''}
-            commit_id={metadata?.latest_commit_id || ''}
             jsonStr={irResponse?.data.json}
             cirStr={irResponse?.data.cir}
+            status={irResponse?.data.status}
             isLoading={isSourceLoading || isIrLoading}
           />
         </Allotment>

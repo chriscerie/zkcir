@@ -62,10 +62,6 @@ async fn main() {
             put(ir::compile_to_ir),
         )
         .route("/v1/ir/:owner/:repo_name/:commit_id", get(ir::get_ir))
-        .route(
-            "/v1/ir/status/:owner/:repo_name/:commit_id",
-            get(ir::get_ir_status),
-        )
         .route("/v1/ir/metadata/list", get(ir::list_irs_metadata))
         .route("/v1/ir/versions/:repo_name", get(ir::list_ir_versions))
         .with_state(app_state)
