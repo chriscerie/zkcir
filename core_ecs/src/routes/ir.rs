@@ -1,4 +1,4 @@
-use aws_sdk_s3::{presigning::PresigningConfig, primitives::ByteStream};
+use aws_sdk_s3::{presigning::PresigningConfig, primitives::ByteStream, types::ObjectIdentifier};
 use axum::{
     debug_handler,
     extract::{Path, State},
@@ -116,6 +116,56 @@ pub async fn compile_to_ir(
 
     app_state
         .get_s3_client()
+        .delete_objects()
+        .bucket(circuits_bucket_name)
+        .delete(
+            aws_sdk_s3::types::Delete::builder()
+                .objects(
+                    ObjectIdentifier::builder()
+                        .key(format!(
+                            "{}/{repo_name}/{commit_id}/ir.json",
+                            user_data.claims.sub
+                        ))
+                        .build()?,
+                )
+                .objects(
+                    ObjectIdentifier::builder()
+                        .key(format!(
+                            "{}/{repo_name}/{commit_id}/ir.cir",
+                            user_data.claims.sub
+                        ))
+                        .build()?,
+                )
+                .objects(
+                    ObjectIdentifier::builder()
+                        .key(format!(
+                            "{}/{repo_name}/{commit_id}/status.txt",
+                            user_data.claims.sub
+                        ))
+                        .build()?,
+                )
+                .objects(
+                    ObjectIdentifier::builder()
+                        .key(format!(
+                            "{}/{repo_name}/{commit_id}/executable",
+                            user_data.claims.sub
+                        ))
+                        .build()?,
+                )
+                .build()?,
+        )
+        .send()
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete previous IR from S3: {e}");
+            AppError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            )
+        })?;
+
+    app_state
+        .get_s3_client()
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!(
@@ -201,7 +251,7 @@ async fn compile_and_upload(
     commit_id: String,
     example_artifact: Option<String>,
 ) -> Result<(), String> {
-    let unzipped_dir_path = unzipped_dir.path();
+    let unzipped_dir_path = unzipped_dir.path().to_path_buf();
 
     let circuits_bucket_name = CIRCUITS_BUCKET_NAME
         .as_ref()
@@ -231,17 +281,22 @@ async fn compile_and_upload(
         parsed_cargo_table,
     )?;
 
-    let output = Command::new("cargo")
-        .arg("build")
-        .args(
-            example_artifact
-                .as_ref()
-                .map(|name| vec!["--example".to_string(), name.to_string()])
-                .unwrap_or_default(),
-        )
-        .current_dir(unzipped_dir_path)
-        .output()
-        .map_err(|e| format!("Failed to build project: {e}"))?;
+    let example_artifact_clone = example_artifact.clone();
+    let output = tokio::task::spawn_blocking(move || {
+        Command::new("cargo")
+            .arg("build")
+            .args(
+                example_artifact_clone
+                    .as_ref()
+                    .map(|name| vec!["--example".to_string(), name.to_string()])
+                    .unwrap_or_default(),
+            )
+            .current_dir(unzipped_dir_path)
+            .output()
+    })
+    .await
+    .map_err(|e| format!("Failed to join thread: {e}"))?
+    .map_err(|e| format!("Failed to build project: {e}"))?;
 
     if !output.status.success() {
         return Err(format!(
@@ -253,7 +308,7 @@ async fn compile_and_upload(
 
     tracing::info!("Project built successfully");
 
-    let debug_folder = unzipped_dir_path.join("target/debug");
+    let debug_folder = unzipped_dir.path().join("target/debug");
 
     let executable_path = if let Some(name) = example_artifact {
         debug_folder.join("examples").join(name)
