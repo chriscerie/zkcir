@@ -66,7 +66,9 @@ export default function CloneAndCompileButtons({
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(`https://zkcir.chrisc.dev/v1/ir/${user.user?.sub}/${repo_name}/${commit_id}`)
+        queryClient.invalidateQueries(
+          `https://zkcir.chrisc.dev/v1/ir/${user.user?.sub}/${repo_name}/${commit_id}`,
+        );
         close();
       },
     },

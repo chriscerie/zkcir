@@ -184,7 +184,11 @@ export default function IrEditor({
       </Tabs>
 
       {page == COMPILATION && !isLoading && (
-        <CompilationStatusPage onGoToIr={() => setPage(CIR)} status={status} />
+        <CompilationStatusPage
+          onGoToIr={() => setPage(CIR)}
+          status={status}
+          isLoading={isLoading}
+        />
       )}
 
       {(page == JSON || page == CIR) && !isLoading && (

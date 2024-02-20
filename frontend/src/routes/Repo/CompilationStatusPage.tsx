@@ -1,4 +1,4 @@
-import { Button, Space, Text, Timeline } from '@mantine/core';
+import { Button, Loader, Space, Text, Timeline } from '@mantine/core';
 import { IconGitBranch } from '@tabler/icons-react';
 import 'allotment/dist/style.css';
 import { GetIrStatusResponse } from '../../types';
@@ -11,17 +11,31 @@ const statusToIndex: { [key in GetIrStatusResponse]: number } = {
 };
 
 export default function IrEditor({
+  isLoading,
   onGoToIr,
   status,
 }: {
   onGoToIr: () => void;
   status?: GetIrStatusResponse;
+  isLoading: boolean;
 }) {
-  if (!status) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '80vh',
+        }}
+      >
+        <Loader color="blue" type="dots" />
+      </div>
+    );
   }
 
-  const index = statusToIndex[status];
+  // Status won't exist if it's an empty repo
+  const index = status ? statusToIndex[status] : -1;
 
   return (
     <div
@@ -33,9 +47,6 @@ export default function IrEditor({
         <Timeline.Item bullet={<IconGitBranch size={12} />} title="Initiated">
           <Text c="dimmed" size="sm">
             Started compilation
-          </Text>
-          <Text size="xs" mt={4}>
-            2 hours ago
           </Text>
         </Timeline.Item>
 

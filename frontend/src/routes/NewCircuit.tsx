@@ -54,8 +54,8 @@ function NewCircuit() {
         console.error('Error:', error);
         alert('Error creating new repository');
       },
-      onSuccess: (data) => {
-        navigate(`/repo/${data.repo_name}`);
+      onSuccess: (_, repoName) => {
+        navigate(`/${user.user?.sub}/${repoName}`);
       },
     },
   );
