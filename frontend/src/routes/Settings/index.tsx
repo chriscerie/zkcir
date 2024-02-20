@@ -12,7 +12,7 @@ import NewKey from './NewKey';
 import { useQuery } from 'react-query';
 import { ListKeysResponse } from '../../types';
 
-const getKeysUrl = `https://zkcir.chrisc.dev/v1/ssh`;
+const getKeysUrl = 'https://zkcir.chrisc.dev/v1/ssh';
 
 export default function Setting() {
   const user = useUser();

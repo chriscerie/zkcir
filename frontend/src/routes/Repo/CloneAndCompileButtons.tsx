@@ -16,7 +16,7 @@ import {
   IconPlayerPlay,
   IconSourceCode,
 } from '@tabler/icons-react';
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../UserContext';
 
@@ -34,6 +34,8 @@ export default function CloneAndCompileButtons({
   onDownloadZip: () => void;
 }) {
   const user = useUser();
+
+  const queryClient = useQueryClient();
 
   const parts = entryPointPath?.split('/');
   const lastPart = parts && parts[parts.length - 1];
@@ -64,6 +66,7 @@ export default function CloneAndCompileButtons({
     },
     {
       onSuccess: () => {
+        queryClient.invalidateQueries(`https://zkcir.chrisc.dev/v1/ir/${user.user?.sub}/${repo_name}/${commit_id}`)
         close();
       },
     },

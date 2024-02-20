@@ -1,7 +1,7 @@
 import { Button, Modal, Space, Textarea } from '@mantine/core';
 import { useUser } from '../../UserContext';
 import { useDisclosure } from '@mantine/hooks';
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { Controller, useForm } from 'react-hook-form';
 
 type FormValues = {
@@ -12,6 +12,8 @@ export default function NewKey() {
   const user = useUser();
   const [opened, { open, close }] = useDisclosure(false);
   const { handleSubmit, control } = useForm<FormValues>();
+
+  const queryClient = useQueryClient();
 
   const mutation = useMutation(
     (key: string) => {
@@ -28,6 +30,7 @@ export default function NewKey() {
     },
     {
       onSuccess: () => {
+        queryClient.invalidateQueries('https://zkcir.chrisc.dev/v1/ssh');
         close();
       },
     },
