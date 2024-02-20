@@ -52,7 +52,32 @@ export default function IrEditor({
 
         <Timeline.Item
           title="Cloning repository"
-          bullet={<IconGitBranch size={12} />}
+          bullet={
+            <div
+              style={{ position: 'relative', width: '20px', height: '20px' }}
+            >
+              <IconGitBranch
+                size={12}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              {index == 1 && (
+                <Loader
+                  color="blue"
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              )}
+            </div>
+          }
           lineVariant="dashed"
         >
           <Text c="dimmed" size="sm">
@@ -62,7 +87,32 @@ export default function IrEditor({
 
         <Timeline.Item
           title="Compiling"
-          bullet={<IconGitBranch size={12} />}
+          bullet={
+            <div
+              style={{ position: 'relative', width: '20px', height: '20px' }}
+            >
+              <IconGitBranch
+                size={12}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+              {index == 2 && (
+                <Loader
+                  color="blue"
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              )}
+            </div>
+          }
           lineVariant="dashed"
         >
           <Text c="dimmed" size="sm">

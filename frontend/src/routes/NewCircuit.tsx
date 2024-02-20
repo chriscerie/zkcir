@@ -90,6 +90,7 @@ function NewCircuit() {
                   label="Name"
                   required
                   placeholder="my-repository"
+                  autoComplete="off"
                 />
               )}
               defaultValue=""
@@ -133,7 +134,7 @@ function NewCircuit() {
               }}
               loading={newRepoMutation.isLoading}
             >
-              Compile
+              Create
             </Button>
 
             <Button

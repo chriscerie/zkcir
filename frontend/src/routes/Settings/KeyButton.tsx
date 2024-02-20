@@ -2,6 +2,7 @@ import { Badge, Button, CopyButton, Group, Text } from '@mantine/core';
 import { useUser } from '../../UserContext';
 import { IconCheck, IconCopy, IconKey, IconTrash } from '@tabler/icons-react';
 import { useState } from 'react';
+import { useMutation, useQueryClient } from 'react-query';
 
 export default function KeyButton({
   keyId,
@@ -11,7 +12,25 @@ export default function KeyButton({
   uploadedTime: string;
 }) {
   const user = useUser();
+  const queryClient = useQueryClient();
   const [isHovered, setIsHovered] = useState(false);
+
+  const deleteMutation = useMutation(
+    () => {
+      return fetch(`https://zkcir.chrisc.dev/v1/ssh/${keyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.user?.auth_token}`,
+        },
+      });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('https://zkcir.chrisc.dev/v1/ssh');
+      },
+    },
+  );
 
   return (
     <CopyButton value={keyId} timeout={2000}>
@@ -48,9 +67,11 @@ export default function KeyButton({
                 leftSection={<IconTrash size="1rem" />}
                 onClick={(event) => {
                   event.stopPropagation();
+                  deleteMutation.mutate();
                 }}
                 onMouseEnter={() => setIsHovered(false)}
                 onMouseLeave={() => setIsHovered(true)}
+                disabled={deleteMutation.isLoading}
               >
                 Delete
               </Button>

@@ -161,7 +161,7 @@ export default function IrEditor({
             padding: '0.2rem 1rem',
           }}
         >
-          <Text size="sm">compilation progress</Text>
+          <Text size="sm">{'zkcir_out > compilation status'}</Text>
         </Tabs.Panel>
 
         <Tabs.Panel
