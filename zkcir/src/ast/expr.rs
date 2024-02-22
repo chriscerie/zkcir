@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::node::Node;
 
-use super::Ident;
+use super::{Ident, Op};
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub enum Expression {
@@ -17,6 +17,10 @@ pub enum Expression {
     },
     Ident(Ident),
     Value(Value),
+    Unary {
+        op: Op,
+        expr: Box<Expression>,
+    },
 }
 
 impl Node for Expression {
@@ -31,6 +35,7 @@ impl Node for Expression {
             }
             Expression::Value(value) => value.visit_values(f),
             Expression::Ident(ident) => ident.visit_values(f),
+            Expression::Unary { expr, .. } => expr.visit_values(f),
         }
     }
 
@@ -45,6 +50,7 @@ impl Node for Expression {
             }
             Expression::Ident(ident) => ident.visit_virtual_wires(f),
             Expression::Value(_) => {}
+            Expression::Unary { expr, .. } => expr.visit_virtual_wires(f),
         }
     }
 
@@ -59,6 +65,7 @@ impl Node for Expression {
             }
             Expression::Ident(ident) => ident.visit_wires(f),
             Expression::Value(_) => {}
+            Expression::Unary { expr, .. } => expr.visit_wires(f),
         }
     }
 
@@ -75,6 +82,9 @@ impl Node for Expression {
             Expression::Value(value) => {
                 value.visit_expressions_mut(f);
             }
+            Expression::Unary { expr, .. } => {
+                *expr = Box::new(f(expr));
+            }
         }
     }
 
@@ -90,6 +100,9 @@ impl Node for Expression {
             Expression::Ident(ident) => *ident = f(ident),
             Expression::Value(value) => {
                 value.visit_idents_mut(f);
+            }
+            Expression::Unary { expr, .. } => {
+                expr.visit_idents_mut(f);
             }
         }
     }
@@ -113,6 +126,9 @@ impl Node for Expression {
             }
             Expression::Value(value) => value.to_code_ir(),
             Expression::Ident(ident) => ident.to_code_ir(),
+            Expression::Unary { op, expr } => {
+                format!("{}{}", op.to_code_ir(), expr.to_code_ir())
+            }
         }
     }
 }
