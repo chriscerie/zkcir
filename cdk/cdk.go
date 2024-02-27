@@ -105,11 +105,8 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 	})
 
 	autoScalingGroup := cluster.AddCapacity(jsii.String("AutoScalingGroup"), &awsecs.AddCapacityOptions{
-		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_SMALL),
+		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_MICRO),
 		MachineImage: awsecs.EcsOptimizedImage_AmazonLinux2023(awsecs.AmiHardwareType_STANDARD, nil),
-
-		MinCapacity: jsii.Number(2),
-		MaxCapacity: jsii.Number(4),
 	})
 	autoScalingGroup.Role().AddManagedPolicy(awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonEC2ContainerServiceforEC2Role")))
 
@@ -154,15 +151,15 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 			StreamPrefix: jsii.String("Service"),
 			LogRetention: awslogs.RetentionDays_ONE_WEEK,
 		}),
-		// Memory reserved should be less than half ec2 instance memory to allow rolling updates. Alternatively lower
-		// max healthy percent to 100%
-		MemoryReservationMiB: jsii.Number(800),
+		MemoryReservationMiB: jsii.Number(700),
 		Cpu:                  jsii.Number(2048),
 	})
 
 	ec2Service := awsecs.NewEc2Service(stack, jsii.String("MyService"), &awsecs.Ec2ServiceProps{
-		Cluster:        cluster,
-		TaskDefinition: taskDefinition,
+		Cluster:           cluster,
+		TaskDefinition:    taskDefinition,
+		MinHealthyPercent: jsii.Number(0),
+		MaxHealthyPercent: jsii.Number(100),
 	})
 	ec2Service.TaskDefinition().GrantRun(taskRole)
 
