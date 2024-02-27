@@ -1,0 +1,19 @@
+.node circle {
+  fill: white;
+  stroke: #2c7590;
+  stroke-width: 3px;
+}
+
+.node {
+  cursor: pointer;
+}
+
+path.link {
+  fill: none;
+  stroke: #2c7590;
+  stroke-width: 3px;
+}
+
+.body {
+  overflow: hidden;
+}

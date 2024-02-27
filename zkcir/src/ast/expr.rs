@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::node::Node;
 
-use super::Ident;
+use super::{ExprPath, Ident, Op};
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub enum Expression {
@@ -17,6 +17,11 @@ pub enum Expression {
     },
     Ident(Ident),
     Value(Value),
+    Unary {
+        op: Op,
+        expr: Box<Expression>,
+    },
+    ExprPath(ExprPath),
 }
 
 impl Node for Expression {
@@ -31,6 +36,8 @@ impl Node for Expression {
             }
             Expression::Value(value) => value.visit_values(f),
             Expression::Ident(ident) => ident.visit_values(f),
+            Expression::Unary { expr, .. } => expr.visit_values(f),
+            Expression::ExprPath(expr_path) => expr_path.visit_values(f),
         }
     }
 
@@ -45,6 +52,8 @@ impl Node for Expression {
             }
             Expression::Ident(ident) => ident.visit_virtual_wires(f),
             Expression::Value(_) => {}
+            Expression::Unary { expr, .. } => expr.visit_virtual_wires(f),
+            Expression::ExprPath(expr_path) => expr_path.visit_virtual_wires(f),
         }
     }
 
@@ -59,6 +68,8 @@ impl Node for Expression {
             }
             Expression::Ident(ident) => ident.visit_wires(f),
             Expression::Value(_) => {}
+            Expression::Unary { expr, .. } => expr.visit_wires(f),
+            Expression::ExprPath(expr_path) => expr_path.visit_wires(f),
         }
     }
 
@@ -74,6 +85,12 @@ impl Node for Expression {
             Expression::Ident(ident) => ident.visit_expressions_mut(f),
             Expression::Value(value) => {
                 value.visit_expressions_mut(f);
+            }
+            Expression::Unary { expr, .. } => {
+                *expr = Box::new(f(expr));
+            }
+            Expression::ExprPath(expr_path) => {
+                expr_path.visit_expressions_mut(f);
             }
         }
     }
@@ -91,6 +108,10 @@ impl Node for Expression {
             Expression::Value(value) => {
                 value.visit_idents_mut(f);
             }
+            Expression::Unary { expr, .. } => {
+                expr.visit_idents_mut(f);
+            }
+            Expression::ExprPath(expr_path) => expr_path.visit_idents_mut(f),
         }
     }
 
@@ -113,6 +134,10 @@ impl Node for Expression {
             }
             Expression::Value(value) => value.to_code_ir(),
             Expression::Ident(ident) => ident.to_code_ir(),
+            Expression::Unary { op, expr } => {
+                format!("{}{}", op.to_code_ir(), expr.to_code_ir())
+            }
+            Expression::ExprPath(expr_path) => expr_path.to_code_ir(),
         }
     }
 }
@@ -335,10 +360,13 @@ impl Node for Wire {
         }
     }
 
-    fn visit_virtual_wires<F>(&mut self, _f: &mut F)
+    fn visit_virtual_wires<F>(&mut self, f: &mut F)
     where
         F: FnMut(&mut VirtualWire),
     {
+        if let Some(value) = &mut self.value {
+            value.visit_virtual_wires(f);
+        }
     }
 
     fn visit_wires<F>(&mut self, f: &mut F)
