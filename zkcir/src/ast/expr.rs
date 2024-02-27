@@ -305,6 +305,8 @@ pub struct Wire {
     pub row: usize,
     pub column: usize,
     pub value: Option<Value>,
+    pub is_constant: bool,
+    pub is_public: bool, 
 }
 
 impl Wire {
@@ -314,6 +316,8 @@ impl Wire {
             row,
             column,
             value: None,
+            is_constant: true,
+            is_public: true,
         }
     }
 }
@@ -401,6 +405,8 @@ mod tests {
                             row: 1,
                             column: 2,
                             value: Some(Value::U64(5)),
+                            is_constant: true, //initialize with proper value
+                            is_public: true, //initialize with proper value
                         }
                         .into(),
                     ),
