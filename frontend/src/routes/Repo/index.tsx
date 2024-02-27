@@ -257,6 +257,8 @@ export default function Repo() {
             )}
           </Allotment.Pane>
           <CodeEditor
+            files={irSource?.items}
+            loading={isSourceLoading}
             selectedSource={selectedSource}
             isSelectedEntryPoint={
               entryPointPath ? entryPointPath == selectedSource?.path : false
