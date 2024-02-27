@@ -276,12 +276,17 @@ impl From<VirtualWire> for Expression {
 
 /// `Target` in plonky2
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
+enum Wiretype {
+    Public,
+    Private,
+    Constant,
+}
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Wire {
     pub row: usize,
     pub column: usize,
     pub value: Option<Value>,
-    pub is_constant: bool,
-    pub is_public: bool, 
+    pub wiretype: Wiretype, 
 }
 
 impl Wire {
@@ -291,9 +296,32 @@ impl Wire {
             row,
             column,
             value: None,
-            is_constant: true,
-            is_public: true,
+            wiretype: Wiretype::Private,  //default wiretype
         }
+    }
+    pub fn new_constant(row: usize, column: usize) -> Expression {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype: Wiretype::Constant,  //default wiretype
+        }.into()
+    }
+    pub fn new_private(row: usize, column: usize) -> Expression {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype: Wiretype::Private,  //default wiretype
+        }.into()
+    }
+    pub fn new_public(row: usize, column: usize) -> Expression {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype: Wiretype::Public,  //default wiretype
+        }.into()
     }
 }
 
@@ -339,15 +367,21 @@ impl Node for Wire {
     }
 
     fn to_code_ir(&self) -> alloc::string::String {
+        let wiretype_str = match self.wiretype {
+            Wiretype::Public => "Public",
+            Wiretype::Private => "Private",
+            Wiretype::Constant => "Constant",
+        };
         if let Some(value) = &self.value {
             format!(
-                "wire!(row: {}, column: {}, value: {})",
+                "{}::wire!(row: {}, column: {}, value: {})",
+                wiretype_str,
                 self.row,
                 self.column,
                 value.to_code_ir()
             )
         } else {
-            format!("wire!(row: {}, column: {})", self.row, self.column)
+            format!("{}::wire!(row: {}, column: {})", wiretype_str, self.row, self.column)
         }
     }
 }
@@ -377,8 +411,7 @@ mod tests {
                             row: 1,
                             column: 2,
                             value: Some(Value::U64(5)),
-                            is_constant: true, //initialize with proper value
-                            is_public: true, //initialize with proper value
+                            wiretype:Wiretype::Private,
                         }
                         .into(),
                     ),
