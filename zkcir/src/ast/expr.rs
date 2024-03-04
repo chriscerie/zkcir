@@ -398,9 +398,9 @@ impl Node for Wire {
 
     fn to_code_ir(&self) -> alloc::string::String {
         let wiretype_str = match self.wiretype {
-            Wiretype::Public => "Public",
-            Wiretype::Private => "Private",
-            Wiretype::Constant => "Constant",
+            Wiretype::Public => "public",
+            Wiretype::Private => "private",
+            Wiretype::Constant => "constant",
         };
         if let Some(value) = &self.value {
             format!(
