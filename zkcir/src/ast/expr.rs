@@ -299,13 +299,15 @@ impl From<VirtualWire> for Expression {
     }
 }
 
-/// `Target` in plonky2
+/// in halo2, public = instance, private = advice, and constant = fixed
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
-enum Wiretype {
+pub enum Wiretype {
     Public,
     Private,
     Constant,
 }
+
+/// `Target` in plonky2
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Wire {
     pub row: usize,
