@@ -105,7 +105,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 	})
 
 	autoScalingGroup := cluster.AddCapacity(jsii.String("AutoScalingGroup"), &awsecs.AddCapacityOptions{
-		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_MICRO),
+		InstanceType: awsec2.InstanceType_Of(awsec2.InstanceClass_T3A, awsec2.InstanceSize_SMALL),
 		MachineImage: awsecs.EcsOptimizedImage_AmazonLinux2023(awsecs.AmiHardwareType_STANDARD, nil),
 	})
 	autoScalingGroup.Role().AddManagedPolicy(awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("service-role/AmazonEC2ContainerServiceforEC2Role")))
@@ -151,7 +151,7 @@ func NewZkcirCdkStack(scope constructs.Construct, id string, props *ZkcirCdkStac
 			StreamPrefix: jsii.String("Service"),
 			LogRetention: awslogs.RetentionDays_ONE_WEEK,
 		}),
-		MemoryReservationMiB: jsii.Number(700),
+		MemoryReservationMiB: jsii.Number(1700),
 		Cpu:                  jsii.Number(2048),
 	})
 

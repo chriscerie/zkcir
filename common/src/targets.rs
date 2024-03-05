@@ -3,7 +3,7 @@ use core::hash::Hash;
 use std::collections::HashSet;
 use std::hash::Hasher;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub enum TargetFramework {
     Plonky2,
 }
