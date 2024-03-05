@@ -55,7 +55,7 @@ export default function Home() {
   return (
     <AppShellMain>
       <Container
-        size={700}
+        size={900}
         className={classes.inner}
         style={{
           marginTop: '2rem',
@@ -111,14 +111,18 @@ export default function Home() {
               <Skeleton height={8} mt={6} width="70%" radius="xl" />
             </>
           ) : (
-            (irs?.repos || []).map((item, index) => (
-              <RepoStackCard
-                name={item.name}
-                description={''}
-                key={index}
-                ownerSub={user.user?.sub || ''}
-              />
-            ))
+            (irs?.repos || [])
+              .sort((a, b) => b.last_modified_date - a.last_modified_date)
+              .map((item, index) => (
+                <RepoStackCard
+                  name={item.name}
+                  description={''}
+                  key={index}
+                  ownerSub={user.user?.sub || ''}
+                  last_modified_date={item.last_modified_date}
+                  framework={item.framework}
+                />
+              ))
           )}
         </SimpleGrid>
       </Container>
