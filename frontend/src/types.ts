@@ -45,4 +45,5 @@ export type ListKeysResponse = {
 
 export enum TargetFramework {
   Plonky2 = 'Plonky2',
+  Halo2 = 'Halo2',
 }
