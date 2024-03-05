@@ -18,8 +18,7 @@ import { SelectedSource } from './SelectedSource';
 import { getLanguageInfo } from './Languages';
 import { isValidEntryPoint } from './EntryPoint';
 import { IFileNode } from './FileNode';
-import DragAndDrop from '../../components/DragAndDrop'
-
+import DragAndDrop from '../../components/DragAndDrop';
 
 export default function IrEditor({
   files,
@@ -40,7 +39,11 @@ export default function IrEditor({
     for (const key in node) {
       if (Object.prototype.hasOwnProperty.call(node, key)) {
         const value = node[key];
-        if (typeof value === 'object' && value !== null && !isEmptyFileNode(value)) {
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !isEmptyFileNode(value)
+        ) {
           return false;
         } else if (typeof value === 'string') {
           return false;
@@ -114,7 +117,7 @@ export default function IrEditor({
             value={selectedSource.source}
             theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
             options={{
-              padding: { top: '20rem' },
+              padding: { top: 20 },
             }}
           />
         </>

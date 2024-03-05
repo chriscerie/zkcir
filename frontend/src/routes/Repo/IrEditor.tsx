@@ -1,19 +1,57 @@
 import { Tabs, Text, rem, useMantineColorScheme } from '@mantine/core';
 import { IconSettings } from '@tabler/icons-react';
-import { Editor } from '@monaco-editor/react';
+import { Editor, Monaco } from '@monaco-editor/react';
 import 'allotment/dist/style.css';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { init } from 'echarts';
 import ir_view from '../../helpers/ir_view';
 import TreeComponent from '../../components/TreeComponent';
 import CompilationStatusPage from './CompilationStatusPage';
 import { GetIrStatusResponse } from '../../types';
+import { IPosition, editor } from 'monaco-editor';
 
 const COMPILATION = 'compilation';
 const JSON = 'json';
 const CIR = 'cir';
 const AST = 'ast';
 const AST_TREE = 'ast_tree';
+
+// TODO: This is fragile. This should be replaced with a proper parser and lint through AST
+// verify!(public_input_1 < (2u64 ^ 6u64)); lints on public_input_1
+function findPublicInVerify(
+  text: string,
+): { start: IPosition; end: IPosition } | null {
+  const verifyRegex = /verify!\((public_input_\w+)/g;
+  const match = verifyRegex.exec(text);
+  if (!match) {
+    return null;
+  }
+
+  const publicInput = match[1];
+  const startOffset = match.index + 'verify!('.length;
+  const endOffset = startOffset + publicInput.length;
+
+  const start = byteOffsetToPosition(text, startOffset);
+  const end = byteOffsetToPosition(text, endOffset);
+
+  return { start, end };
+}
+
+function byteOffsetToPosition(text: string, offset: number): IPosition {
+  let line = 1;
+  let column = 1;
+
+  for (let i = 0; i < offset; i++) {
+    if (text[i] === '\n') {
+      line++;
+      column = 1;
+    } else {
+      column++;
+    }
+  }
+
+  return { lineNumber: line, column: column };
+}
 
 export default function IrEditor({
   jsonStr,
@@ -27,6 +65,9 @@ export default function IrEditor({
   status?: GetIrStatusResponse;
 }) {
   const { colorScheme } = useMantineColorScheme();
+
+  const editorRef = useRef<editor.IStandaloneCodeEditor>();
+  const monacoRef = useRef<Monaco>();
 
   const [page, setPage] = useState<string | null>(jsonStr ? CIR : COMPILATION);
 
@@ -101,6 +142,42 @@ export default function IrEditor({
       myChart.dispose();
     };
   }, [tree, page]);
+
+  const onIrChange = useCallback(
+    (value?: string) => {
+      const editorModel = editorRef.current?.getModel();
+      const monaco = monacoRef.current;
+
+      if (editorModel && monaco) {
+        monaco.editor.removeAllMarkers('ir');
+
+        if (value && page == CIR) {
+          const lintPosition = findPublicInVerify(value);
+
+          if (lintPosition) {
+            monaco.editor.setModelMarkers(editorModel, 'ir', [
+              {
+                startLineNumber: lintPosition.start.lineNumber,
+                startColumn: lintPosition.start.column,
+                endLineNumber: lintPosition.end.lineNumber,
+                endColumn: lintPosition.end.column,
+                message:
+                  'Public input is exposed to verifier. Ensure this is intended.',
+                severity: monaco.MarkerSeverity.Warning,
+              },
+            ]);
+          }
+        }
+      }
+    },
+    [page],
+  );
+
+  // `onChange` doesn't fire when value is set programmatically, so we need to call `onIrChange` manually when
+  // the page changes
+  useEffect(() => {
+    onIrChange(page == CIR ? cirStr : jsonStr);
+  }, [cirStr, jsonStr, onIrChange, page]);
 
   return (
     <>
@@ -197,10 +274,19 @@ export default function IrEditor({
           language={page == JSON ? 'json' : 'rust'}
           value={page == JSON ? jsonStr : cirStr}
           options={{
-            readOnly: true,
-            padding: { top: '20rem' },
+            // For some reason diagnostics don't show up if readOnly is enabled
+            readOnly: false,
+            padding: { top: 20 },
           }}
           theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
+          onMount={(editor, monaco) => {
+            editorRef.current = editor;
+            monacoRef.current = monaco;
+            onIrChange(editor.getValue());
+          }}
+          onChange={(value) => {
+            onIrChange(value);
+          }}
         />
       )}
 
