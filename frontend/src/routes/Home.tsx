@@ -55,7 +55,7 @@ export default function Home() {
   return (
     <AppShellMain>
       <Container
-        size={700}
+        size={900}
         className={classes.inner}
         style={{
           marginTop: '2rem',
