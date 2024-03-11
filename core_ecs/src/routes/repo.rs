@@ -63,10 +63,9 @@ pub async fn create_repo(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    let iam_client = app_state.get_iam_client();
-    let codecommit_client = app_state.get_codecommit_client();
+    let codecommit_client = app_state.codecommit_client;
 
-    upsert_iam_user(iam_client, &user_data.claims.sub).await?;
+    upsert_iam_user(&app_state.iam_client, &user_data.claims.sub).await?;
 
     let repo_name = format!("{}.{}", &user_data.claims.sub, &payload.repo_name);
 
@@ -131,7 +130,7 @@ pub async fn get_repo_metadata(
 
     let repo_full_name = format!("{owner}.{repo_name}");
 
-    let codecommit_client = app_state.get_codecommit_client();
+    let codecommit_client = app_state.codecommit_client;
 
     let Some(metadata) = codecommit_client
         .get_repository()
@@ -215,11 +214,9 @@ pub async fn get_repo_source(
         ));
     }
 
-    let codecommit_client = app_state.get_codecommit_client();
-
     let repo_full_name = format!("{owner}.{repo_name}");
 
-    let clone_url = get_http_clone_url(codecommit_client, &repo_full_name).await?;
+    let clone_url = get_http_clone_url(&app_state.codecommit_client, &repo_full_name).await?;
     let repo_dir = clone_repo(&clone_url)?;
 
     let zipped_source = zip_path(repo_dir.path())?;
