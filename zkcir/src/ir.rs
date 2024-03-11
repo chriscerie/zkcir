@@ -276,15 +276,15 @@ mod tests {
         let mut circuit = CirBuilder::new();
         circuit
             .add_stmt(Stmt::Local(
-                Ident::Wire(Wire::new(3, 2)),
+                Ident::Wire(Wire::new_private(3, 2)),
                 Expression::BinaryOperator {
                     lhs: Box::new(Expression::BinaryOperator {
-                        lhs: Box::new(Wire::new(1, 2).into()),
+                        lhs: Box::new(Wire::new_private(1, 2).into()),
                         binop: BinOp::Add,
                         rhs: Box::new(VirtualWire::new(3).into()),
                     }),
                     binop: BinOp::Multiply,
-                    rhs: Box::new(Wire::new(5, 6).into()),
+                    rhs: Box::new(Wire::new_private(5, 6).into()),
                 },
             ))
             .set_wire_value(5, 6, Value::U64(32))
@@ -299,9 +299,9 @@ mod tests {
         test_ir_string(
             "test_verify",
             CirBuilder::new().add_stmt(Stmt::Verify(Expression::BinaryOperator {
-                lhs: Box::new(Wire::new(5, 6).into()),
+                lhs: Box::new(Wire::new_private(5, 6).into()),
                 binop: BinOp::Equal,
-                rhs: Box::new(Wire::new(5, 6).into()),
+                rhs: Box::new(Wire::new_private(5, 6).into()),
             })),
         );
     }
@@ -315,12 +315,12 @@ mod tests {
                     "rand".into(),
                     Expression::BinaryOperator {
                         lhs: Box::new(Expression::BinaryOperator {
-                            lhs: Box::new(Wire::new(1, 2).into()),
+                            lhs: Box::new(Wire::new_private(1, 2).into()),
                             binop: BinOp::Add,
                             rhs: Box::new(VirtualWire::new(3).into()),
                         }),
                         binop: BinOp::Multiply,
-                        rhs: Box::new(Wire::new(5, 6).into()),
+                        rhs: Box::new(Wire::new_private(5, 6).into()),
                     },
                 ))
                 .set_wire_value(5, 6, Value::RandomU64(32))
@@ -337,15 +337,15 @@ mod tests {
                     "num".into(),
                     Expression::BinaryOperator {
                         lhs: Box::new(Expression::BinaryOperator {
-                            lhs: Box::new(Wire::new(1, 2).into()),
+                            lhs: Box::new(Wire::new_private(1, 2).into()),
                             binop: BinOp::Add,
                             rhs: Box::new(VirtualWire::new(3).into()),
                         }),
                         binop: BinOp::Multiply,
-                        rhs: Box::new(Wire::new(5, 6).into()),
+                        rhs: Box::new(Wire::new_private(5, 6).into()),
                     },
                 ))
-                .register_public_wire_input(Wire::new(1, 2))
+                .register_public_wire_input(Wire::new_private(1, 2))
                 .register_public_virtual_wire_input(VirtualWire::new(3))
                 .build()
                 .to_code_ir(),

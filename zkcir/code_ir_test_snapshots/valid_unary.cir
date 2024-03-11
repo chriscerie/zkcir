@@ -1,1 +1,1 @@
--wire!(row: 5, column: 6)
+-wire::private(row: 5, column: 6)

@@ -1,1 +1,1 @@
-(wire!(row: 1, column: 2, value: 5u64) + virtual_wire!(index: 3)) * wire!(row: 5, column: 6)
+(wire::private(row: 1, column: 2, value: 5u64) + virtual_wire(index: 3)) * wire::private(row: 5, column: 6)

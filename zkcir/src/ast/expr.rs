@@ -274,12 +274,12 @@ impl Node for VirtualWire {
     fn to_code_ir(&self) -> alloc::string::String {
         if let Some(value) = &self.value {
             format!(
-                "virtual_wire!(index: {}, value: {})",
+                "virtual_wire(index: {}, value: {})",
                 self.index,
                 value.to_code_ir()
             )
         } else {
-            format!("virtual_wire!(index: {})", self.index)
+            format!("virtual_wire(index: {})", self.index)
         }
     }
 }
@@ -290,21 +290,60 @@ impl From<VirtualWire> for Expression {
     }
 }
 
+#[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug, Display)]
+pub enum Wiretype {
+    /// * In halo2, instance columns
+    /// * In plonky2, wires registered as public input
+    #[display(fmt = "public")]
+    Public,
+
+    /// * In halo2, advice columns
+    /// * In plonky2, wires not registered as public input
+    #[display(fmt = "private")]
+    Private,
+
+    /// * In halo2, fixed columns
+    #[display(fmt = "const")]
+    Constant,
+}
+
 /// `Target` in plonky2
 #[derive(PartialEq, Eq, Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct Wire {
     pub row: usize,
     pub column: usize,
     pub value: Option<Value>,
+    pub wiretype: Wiretype,
 }
 
 impl Wire {
     #[must_use]
-    pub fn new(row: usize, column: usize) -> Self {
+    pub fn new_constant(row: usize, column: usize) -> Wire {
         Self {
             row,
             column,
             value: None,
+            wiretype: Wiretype::Constant,
+        }
+    }
+
+    #[must_use]
+    pub fn new_private(row: usize, column: usize) -> Wire {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype: Wiretype::Private,
+        }
+    }
+
+    #[must_use]
+    pub fn new_public(row: usize, column: usize) -> Wire {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype: Wiretype::Public,
         }
     }
 }
@@ -356,13 +395,17 @@ impl Node for Wire {
     fn to_code_ir(&self) -> alloc::string::String {
         if let Some(value) = &self.value {
             format!(
-                "wire!(row: {}, column: {}, value: {})",
+                "wire::{}(row: {}, column: {}, value: {})",
+                self.wiretype,
                 self.row,
                 self.column,
                 value.to_code_ir()
             )
         } else {
-            format!("wire!(row: {}, column: {})", self.row, self.column)
+            format!(
+                "wire::{}(row: {}, column: {})",
+                self.wiretype, self.row, self.column
+            )
         }
     }
 }
@@ -392,6 +435,7 @@ mod tests {
                             row: 1,
                             column: 2,
                             value: Some(Value::U64(5)),
+                            wiretype: Wiretype::Private,
                         }
                         .into(),
                     ),
@@ -399,7 +443,7 @@ mod tests {
                     rhs: Box::new(VirtualWire::new(3).into()),
                 }),
                 binop: BinOp::Multiply,
-                rhs: Box::new(Wire::new(5, 6).into()),
+                rhs: Box::new(Wire::new_private(5, 6).into()),
             }
             .to_code_ir(),
         );

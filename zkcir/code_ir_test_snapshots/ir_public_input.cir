@@ -1,5 +1,5 @@
-let public_input_1 = virtual_wire!(index: 3);
+let public_input_1 = virtual_wire(index: 3);
 
-let public_input_2 = wire!(row: 1, column: 2);
+let public_input_2 = wire::private(row: 1, column: 2);
 
-let num = (public_input_2 + public_input_1) * wire!(row: 5, column: 6);
+let num = (public_input_2 + public_input_1) * wire::private(row: 5, column: 6);

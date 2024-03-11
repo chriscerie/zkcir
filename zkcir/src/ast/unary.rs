@@ -69,7 +69,7 @@ mod tests {
             "valid_unary",
             &Expression::Unary {
                 op: Op::Sub,
-                expr: Box::new(Wire::new(5, 6).into()),
+                expr: Box::new(Wire::new_private(5, 6).into()),
             }
             .to_code_ir(),
         );
