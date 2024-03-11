@@ -117,15 +117,15 @@ mod tests {
         test_code_ir(
             "valid_stmt_source",
             &Stmt::Local(
-                Ident::Wire(Wire::new(3, 2)),
+                Ident::Wire(Wire::new_public(3, 2)),
                 Expression::BinaryOperator {
                     lhs: Box::new(Expression::BinaryOperator {
-                        lhs: Box::new(Wire::new(1, 2).into()),
+                        lhs: Box::new(Wire::new_constant(1, 2).into()),
                         binop: BinOp::Add,
                         rhs: Box::new(VirtualWire::new(3).into()),
                     }),
                     binop: BinOp::Multiply,
-                    rhs: Box::new(Wire::new(5, 6).into()),
+                    rhs: Box::new(Wire::new_private(5, 6).into()),
                 },
             )
             .to_code_ir(),

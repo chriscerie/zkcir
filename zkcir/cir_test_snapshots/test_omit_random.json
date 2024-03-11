@@ -17,7 +17,8 @@
                     "Wire": {
                       "row": 1,
                       "column": 2,
-                      "value": null
+                      "value": null,
+                      "wiretype": "Private"
                     }
                   }
                 },
@@ -40,7 +41,8 @@
                 "Wire": {
                   "row": 5,
                   "column": 6,
-                  "value": "Random"
+                  "value": "Random",
+                  "wiretype": "Private"
                 }
               }
             }

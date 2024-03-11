@@ -1,1 +1,1 @@
-let wire!(row: 3, column: 2) = (wire!(row: 1, column: 2) + virtual_wire!(index: 3)) * wire!(row: 5, column: 6);
+let wire::public(row: 3, column: 2) = (wire::const(row: 1, column: 2) + virtual_wire(index: 3)) * wire::private(row: 5, column: 6);

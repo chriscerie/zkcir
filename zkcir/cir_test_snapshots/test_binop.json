@@ -9,7 +9,8 @@
           "Wire": {
             "row": 3,
             "column": 2,
-            "value": null
+            "value": null,
+            "wiretype": "Private"
           }
         },
         {
@@ -21,7 +22,8 @@
                     "Wire": {
                       "row": 1,
                       "column": 2,
-                      "value": null
+                      "value": null,
+                      "wiretype": "Private"
                     }
                   }
                 },
@@ -46,7 +48,8 @@
                   "column": 6,
                   "value": {
                     "U64": 32
-                  }
+                  },
+                  "wiretype": "Private"
                 }
               }
             }

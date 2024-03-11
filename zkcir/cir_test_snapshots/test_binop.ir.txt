@@ -9,6 +9,7 @@ CirBuilder {
                     row: 3,
                     column: 2,
                     value: None,
+                    wiretype: Private,
                 },
             ),
             BinaryOperator {
@@ -19,6 +20,7 @@ CirBuilder {
                                 row: 1,
                                 column: 2,
                                 value: None,
+                                wiretype: Private,
                             },
                         ),
                     ),
@@ -47,6 +49,7 @@ CirBuilder {
                                     32,
                                 ),
                             ),
+                            wiretype: Private,
                         },
                     ),
                 ),
