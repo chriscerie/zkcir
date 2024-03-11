@@ -1,4 +1,5 @@
 use clap::Parser;
+use common::{get_parsed_cargo, targets::TargetFramework};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{
     env::{self},
@@ -7,7 +8,6 @@ use std::{
     path::Path,
     process::{self, Command},
 };
-use targets::TargetFramework;
 use tempfile::tempdir;
 use terminal::{create_new_pb, get_formatted_left_output, OutputColor};
 use toml::Value;
@@ -17,7 +17,6 @@ use zkcir::{ir::Cir, END_DISCRIMINATOR, START_DISCRIMINATOR};
 use args::Args;
 
 mod args;
-mod targets;
 mod terminal;
 
 fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String> {
@@ -29,7 +28,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
     }
 
     pb.set_message(": cargo");
-    let mut parsed_cargo = get_parsed_cargo()?;
+    let mut parsed_cargo = get_parsed_cargo(Path::new("Cargo.toml"))?;
 
     let dependencies = parsed_cargo
         .get("dependencies")
@@ -44,6 +43,8 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
     pb.set_message(": target framework");
     let target_framework = if dependencies.get("plonky2").is_some() {
         TargetFramework::Plonky2
+    } else if dependencies.get("halo2").is_some() {
+        TargetFramework::Halo2
     } else {
         panic!("No supported target framework found");
     };
@@ -92,7 +93,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
         .as_table_mut()
         .ok_or("Expected `crates-io` to be a table")?;
 
-    for target_dependency in target_framework.get_dependencies() {
+    for target_dependency in target_framework.dependencies() {
         for dependency_name in target_dependency.dependency_names {
             let dependency_table = crates_io_table
                 .entry(dependency_name)
@@ -319,16 +320,6 @@ fn main() {
 
         process::exit(1);
     });
-}
-
-fn get_parsed_cargo() -> Result<toml::Value, String> {
-    let contents =
-        fs::read_to_string("Cargo.toml").map_err(|_| "Failed to find required `Cargo.toml`")?;
-
-    Ok(contents
-        .parse::<toml::Value>()
-        .map_err(|e| format!("Failed to parse `Cargo.toml`: {}", e))?
-        .to_owned())
 }
 
 fn copy_to(from: &Path, to: &Path) -> io::Result<u64> {

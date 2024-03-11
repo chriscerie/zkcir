@@ -17,21 +17,47 @@ import 'allotment/dist/style.css';
 import { SelectedSource } from './SelectedSource';
 import { getLanguageInfo } from './Languages';
 import { isValidEntryPoint } from './EntryPoint';
+import { IFileNode } from './FileNode';
+import DragAndDrop from '../../components/DragAndDrop';
 
 export default function IrEditor({
+  files,
+  loading,
   selectedSource,
   isSelectedEntryPoint,
   toggleEntryPoint,
 }: {
+  files?: IFileNode;
+  loading: boolean;
   selectedSource?: SelectedSource;
   isSelectedEntryPoint: boolean;
   toggleEntryPoint: (entryPoint: boolean) => void;
 }) {
   const { colorScheme } = useMantineColorScheme();
 
+  function isEmptyFileNode(node: IFileNode | undefined): boolean {
+    for (const key in node) {
+      if (Object.prototype.hasOwnProperty.call(node, key)) {
+        const value = node[key];
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !isEmptyFileNode(value)
+        ) {
+          return false;
+        } else if (typeof value === 'string') {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   return (
     <>
-      {selectedSource ? (
+      {isEmptyFileNode(files) && !loading ? (
+        <DragAndDrop />
+      ) : selectedSource ? (
         <>
           <Tabs variant="outline" value={selectedSource.path}>
             <Tabs.List>
@@ -91,7 +117,7 @@ export default function IrEditor({
             value={selectedSource.source}
             theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
             options={{
-              padding: { top: '20rem' },
+              padding: { top: 20 },
             }}
           />
         </>

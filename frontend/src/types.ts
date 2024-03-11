@@ -1,6 +1,9 @@
 export type ListReposResponse = {
   repos: Array<{
     name: string;
+    full_name: string;
+    last_modified_date: number;
+    framework: TargetFramework;
   }>;
 };
 
@@ -24,7 +27,7 @@ export type GetIrVersionsResponse = {
 export type GetIrSourceResponse = Blob;
 
 export enum GetIrStatusResponse {
-  NotStarted = 'NotStarted', // Not actually returned
+  NotStarted = 'NotStarted',
   CloningRepository = 'CloningRepository',
   Compiling = 'Compiling',
   Completed = 'Completed',
@@ -39,3 +42,8 @@ export type ListKeysResponse = {
     upload_time: string;
   }>;
 };
+
+export enum TargetFramework {
+  Plonky2 = 'Plonky2',
+  Halo2 = 'Halo2',
+}

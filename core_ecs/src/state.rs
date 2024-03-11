@@ -6,11 +6,11 @@ use aws_config::SdkConfig;
 #[allow(dead_code)]
 pub struct AppState {
     aws_config: SdkConfig,
-    dynamodb_client: Arc<aws_sdk_dynamodb::Client>,
-    s3_client: Arc<aws_sdk_s3::Client>,
-    lambda_client: Arc<aws_sdk_lambda::Client>,
-    iam_client: Arc<aws_sdk_iam::Client>,
-    codecommit_client: Arc<aws_sdk_codecommit::Client>,
+    pub dynamodb_client: Arc<aws_sdk_dynamodb::Client>,
+    pub s3_client: Arc<aws_sdk_s3::Client>,
+    pub lambda_client: Arc<aws_sdk_lambda::Client>,
+    pub iam_client: Arc<aws_sdk_iam::Client>,
+    pub codecommit_client: Arc<aws_sdk_codecommit::Client>,
 }
 
 #[allow(dead_code)]
@@ -30,29 +30,5 @@ impl AppState {
             iam_client: Arc::new(iam_client),
             codecommit_client: Arc::new(codecommit_client),
         }
-    }
-
-    pub fn get_aws_config(&self) -> &SdkConfig {
-        &self.aws_config
-    }
-
-    pub fn get_dynamodb_client(&self) -> &aws_sdk_dynamodb::Client {
-        &self.dynamodb_client
-    }
-
-    pub fn get_s3_client(&self) -> &aws_sdk_s3::Client {
-        &self.s3_client
-    }
-
-    pub fn get_lambda_client(&self) -> &aws_sdk_lambda::Client {
-        &self.lambda_client
-    }
-
-    pub fn get_iam_client(&self) -> &aws_sdk_iam::Client {
-        &self.iam_client
-    }
-
-    pub fn get_codecommit_client(&self) -> &aws_sdk_codecommit::Client {
-        &self.codecommit_client
     }
 }

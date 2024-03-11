@@ -45,7 +45,7 @@ pub fn patch_dependencies(
         .as_table_mut()
         .ok_or("Expected `crates-io` to be a table")?;
 
-    for target_dependency in target_framework.get_dependencies() {
+    for target_dependency in target_framework.dependencies() {
         for dependency_name in target_dependency.dependency_names {
             let dependency_table = crates_io_table
                 .entry(dependency_name)
