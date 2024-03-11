@@ -318,6 +318,16 @@ pub struct Wire {
 
 impl Wire {
     #[must_use]
+    pub fn new(row: usize, column: usize, wiretype: Wiretype) -> Wire {
+        Self {
+            row,
+            column,
+            value: None,
+            wiretype,
+        }
+    }
+
+    #[must_use]
     pub fn new_constant(row: usize, column: usize) -> Wire {
         Self {
             row,
