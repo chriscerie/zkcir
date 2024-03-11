@@ -26,10 +26,8 @@ RUN git config --global credential.UseHttpPath true
 
 RUN echo "Building with git config:" && git config --list
 
-# Some frameworks require Rust nightly
-FROM base AS rust-nightly
-
-RUN rustup default nightly
+RUN rustup install stable
+RUN rustup install nightly
 
 FROM node:20 AS react-build
 
@@ -45,7 +43,7 @@ FROM base AS core-ecs-prebuild
 
 RUN cargo build --release --package core_ecs
 
-FROM rust-nightly AS core-ecs
+FROM base AS core-ecs
 
 COPY --from=core-ecs-prebuild /app/target/release/core_ecs /app/main
 COPY --from=react-build /app/build /app/public
@@ -58,7 +56,7 @@ FROM base AS compile-lambda-prebuild
 
 RUN cargo build --release --package compile_lambda
 
-FROM rust-nightly AS compile-lambda
+FROM base AS compile-lambda
 
 COPY --from=compile-lambda-prebuild /app/target/release/compile_lambda /var/task/
 

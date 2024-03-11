@@ -265,8 +265,10 @@ async fn compile_and_upload(
 
     let target_framework = if dependencies.get("plonky2").is_some() {
         TargetFramework::Plonky2
+    } else if dependencies.get("halo2").is_some() {
+        TargetFramework::Halo2
     } else {
-        return Err("No supported target framework found".into());
+        panic!("No supported target framework found");
     };
 
     tracing::info!("Found target framework: {target_framework}");
@@ -283,6 +285,13 @@ async fn compile_and_upload(
 
     let example_artifact_clone = example_artifact.clone();
     let output = tokio::task::spawn_blocking(move || {
+        Command::new("cargo")
+            .arg("override")
+            .arg("set")
+            .arg(target_framework.rust_version())
+            .current_dir(&unzipped_dir_path)
+            .output()?;
+
         Command::new("cargo")
             .arg("build")
             .args(
