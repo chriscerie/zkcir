@@ -20,7 +20,7 @@ impl fmt::Display for TargetFramework {
 
 impl TargetFramework {
     #[must_use]
-    pub fn get_dependencies(&self) -> HashSet<PatchedDependency> {
+    pub fn dependencies(&self) -> HashSet<PatchedDependency> {
         match self {
             TargetFramework::Plonky2 => [PatchedDependency {
                 git_url: "https://github.com/chriscerie/plonky2.git".to_string(),
@@ -47,6 +47,14 @@ impl TargetFramework {
             }]
             .into_iter()
             .collect(),
+        }
+    }
+
+    #[must_use]
+    pub fn rust_version(&self) -> String {
+        match self {
+            TargetFramework::Plonky2 => "nightly".to_string(),
+            TargetFramework::Halo2 => "stable".to_string(),
         }
     }
 }

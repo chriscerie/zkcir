@@ -49,9 +49,9 @@ pub async fn create_key(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    let iam_client = app_state.get_iam_client();
+    let iam_client = app_state.iam_client;
 
-    let iam_user = upsert_iam_user(iam_client, &user_data.claims.sub).await?;
+    let iam_user = upsert_iam_user(&iam_client, &user_data.claims.sub).await?;
 
     iam_client
         .upload_ssh_public_key()
@@ -103,9 +103,9 @@ pub async fn list_keys(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    let iam_client = app_state.get_iam_client();
+    let iam_client = app_state.iam_client;
 
-    let iam_user = upsert_iam_user(iam_client, &user_data.claims.sub).await?;
+    let iam_user = upsert_iam_user(&iam_client, &user_data.claims.sub).await?;
 
     let keys = iam_client
         .list_ssh_public_keys()
@@ -160,9 +160,9 @@ pub async fn delete_key(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    let iam_client = app_state.get_iam_client();
+    let iam_client = app_state.iam_client;
 
-    let iam_user = upsert_iam_user(iam_client, &user_data.claims.sub).await?;
+    let iam_user = upsert_iam_user(&iam_client, &user_data.claims.sub).await?;
 
     iam_client
         .delete_ssh_public_key()

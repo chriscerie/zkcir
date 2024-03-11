@@ -115,7 +115,7 @@ pub async fn compile_to_ir(
     })?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .delete_objects()
         .bucket(circuits_bucket_name)
         .delete(
@@ -165,7 +165,7 @@ pub async fn compile_to_ir(
         })?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!(
@@ -189,14 +189,12 @@ pub async fn compile_to_ir(
 
     let repo_full_name = format!("{owner}.{repo_name}");
 
-    let codecommit_client = app_state.get_codecommit_client();
-
-    let clone_url = get_http_clone_url(codecommit_client, &repo_full_name).await?;
+    let clone_url = get_http_clone_url(&app_state.codecommit_client, &repo_full_name).await?;
 
     let unzipped_dir = clone_repo(&clone_url)?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!(
@@ -265,8 +263,10 @@ async fn compile_and_upload(
 
     let target_framework = if dependencies.get("plonky2").is_some() {
         TargetFramework::Plonky2
+    } else if dependencies.get("halo2").is_some() {
+        TargetFramework::Halo2
     } else {
-        return Err("No supported target framework found".into());
+        panic!("No supported target framework found");
     };
 
     tracing::info!("Found target framework: {target_framework}");
@@ -283,6 +283,13 @@ async fn compile_and_upload(
 
     let example_artifact_clone = example_artifact.clone();
     let output = tokio::task::spawn_blocking(move || {
+        Command::new("cargo")
+            .arg("override")
+            .arg("set")
+            .arg(target_framework.rust_version())
+            .current_dir(&unzipped_dir_path)
+            .output()?;
+
         Command::new("cargo")
             .arg("build")
             .args(
@@ -326,7 +333,7 @@ async fn compile_and_upload(
         .map_err(|e| format!("Failed to read executable file: {e}"))?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
@@ -339,7 +346,7 @@ async fn compile_and_upload(
 
     // Give lambda presigned url as it doesn't have direct access to S3 due to executing arbitrary code
     let executable_presigned_url = app_state
-        .get_s3_client()
+        .s3_client
         .get_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
@@ -359,7 +366,7 @@ async fn compile_and_upload(
     };
 
     let res = app_state
-        .get_lambda_client()
+        .lambda_client
         .invoke()
         .function_name(compile_lambda_arn)
         .payload(aws_sdk_lambda::primitives::Blob::new(
@@ -401,7 +408,7 @@ async fn compile_and_upload(
     let source_ir_string = cir.to_code_ir();
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/ir.json"))
@@ -412,7 +419,7 @@ async fn compile_and_upload(
         .map_err(|e| format!("Failed to upload to S3: {e}"))?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/ir.cir"))
@@ -423,7 +430,7 @@ async fn compile_and_upload(
         .map_err(|e| format!("Failed to upload to S3: {e}"))?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .delete_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/executable"))
@@ -432,7 +439,7 @@ async fn compile_and_upload(
         .map_err(|e| format!("Failed to delete executable from S3: {e}"))?;
 
     app_state
-        .get_s3_client()
+        .s3_client
         .put_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
@@ -500,7 +507,7 @@ pub async fn get_ir(
     })?;
 
     let ir_json_result = app_state
-        .get_s3_client()
+        .s3_client
         .get_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/ir.json"))
@@ -508,7 +515,7 @@ pub async fn get_ir(
         .await;
 
     let ir_cir_result = app_state
-        .get_s3_client()
+        .s3_client
         .get_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/ir.cir"))
@@ -559,7 +566,7 @@ pub async fn get_ir(
     }
 
     let status = app_state
-        .get_s3_client()
+        .s3_client
         .get_object()
         .bucket(circuits_bucket_name)
         .key(format!("{owner}/{repo_name}/{commit_id}/status.txt"))
@@ -657,7 +664,7 @@ pub async fn list_irs_metadata(
     })?;
 
     let list_objects_res = app_state
-        .get_s3_client()
+        .s3_client
         .list_objects_v2()
         .bucket(circuits_bucket_name)
         .prefix(format!("{}/", user_data.claims.sub))
@@ -680,7 +687,7 @@ pub async fn list_irs_metadata(
         // Only one `description.txt` exists per repo, so we use it to get reference to all unique repos
         if key.ends_with("description.txt") {
             let description = app_state
-                .get_s3_client()
+                .s3_client
                 .get_object()
                 .bucket(circuits_bucket_name)
                 .key(key)
@@ -756,7 +763,7 @@ pub async fn list_ir_versions(
     })?;
 
     let list_objects_res = app_state
-        .get_s3_client()
+        .s3_client
         .list_objects_v2()
         .bucket(circuits_bucket_name)
         .prefix(format!("{}/{}/", user_data.claims.sub, repo_name))

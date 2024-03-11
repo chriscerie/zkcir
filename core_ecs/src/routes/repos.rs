@@ -51,7 +51,7 @@ pub async fn list_repos(
         .to_string();
     let user_data = jwt::get_user_claims(&token)?;
 
-    let codecommit_client = app_state.get_codecommit_client();
+    let codecommit_client = app_state.codecommit_client;
 
     let repos = codecommit_client.list_repositories().send().await?;
 
