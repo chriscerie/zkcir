@@ -8,7 +8,6 @@ use serde::Serialize;
 use serde_json;
 
 use crate::ast::Expression;
-use crate::ast::Ident;
 use crate::ast::Stmt;
 use crate::ast::Value;
 use crate::ast::VirtualWire;
@@ -166,78 +165,11 @@ impl CirBuilder {
         self
     }
 
-    pub fn register_public_wire_input(&mut self, wire: Wire) -> &mut Self {
-        self.public_wire_inputs.push(wire);
-        self
-    }
-
-    pub fn register_public_virtual_wire_input(&mut self, wire: VirtualWire) -> &mut Self {
-        self.public_virtual_wire_inputs.push(wire);
-        self
-    }
-
     #[must_use]
     pub fn build(&self) -> Cir {
-        let mut processed_stmts = self.stmts.clone();
-
-        // Count backwards so the first one is the last to be inserted to the front
-        let mut num_public_input =
-            self.public_wire_inputs.len() + self.public_virtual_wire_inputs.len();
-
-        for input in self.public_wire_inputs.iter().rev() {
-            // Replace all references to this wire with the new ident
-            for stmt in &mut processed_stmts {
-                stmt.visit_idents_mut(&mut |ident| {
-                    if let Ident::Wire(wire) = ident {
-                        if wire.row == input.row && wire.column == input.column {
-                            return Ident::String(format!("public_input_{num_public_input}"));
-                        }
-                        return Ident::Wire(*wire);
-                    }
-                    ident.clone()
-                });
-            }
-
-            processed_stmts.insert(
-                0,
-                Stmt::Local(
-                    Ident::String(format!("public_input_{num_public_input}")),
-                    (*input).into(),
-                ),
-            );
-
-            num_public_input -= 1;
-        }
-
-        for input in self.public_virtual_wire_inputs.iter().rev() {
-            // Replace all references to this wire with the new ident
-            for stmt in &mut processed_stmts {
-                stmt.visit_idents_mut(&mut |ident| {
-                    if let Ident::VirtualWire(virtual_wire) = ident {
-                        if virtual_wire.index == input.index {
-                            return Ident::String(format!("public_input_{num_public_input}"));
-                        }
-                        return Ident::VirtualWire(*virtual_wire);
-                    }
-                    ident.clone()
-                });
-            }
-
-            processed_stmts.insert(
-                0,
-                Stmt::Local(
-                    Ident::String(format!("public_input_{num_public_input}")),
-                    (*input).into(),
-                ),
-            );
-
-            num_public_input -= 1;
-        }
-
         Cir {
             config: self.config,
-            stmts: processed_stmts,
-
+            stmts: self.stmts.clone(),
             public_wire_inputs: self.public_wire_inputs.clone(),
             public_virtual_wire_inputs: self.public_virtual_wire_inputs.clone(),
         }
@@ -337,7 +269,7 @@ mod tests {
                     "num".into(),
                     Expression::BinaryOperator {
                         lhs: Box::new(Expression::BinaryOperator {
-                            lhs: Box::new(Wire::new_private(1, 2).into()),
+                            lhs: Box::new(Wire::new_public(1, 2).into()),
                             binop: BinOp::Add,
                             rhs: Box::new(VirtualWire::new(3).into()),
                         }),
@@ -345,8 +277,6 @@ mod tests {
                         rhs: Box::new(Wire::new_private(5, 6).into()),
                     },
                 ))
-                .register_public_wire_input(Wire::new_private(1, 2))
-                .register_public_virtual_wire_input(VirtualWire::new(3))
                 .build()
                 .to_code_ir(),
         );
