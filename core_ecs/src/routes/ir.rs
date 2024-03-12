@@ -283,7 +283,7 @@ async fn compile_and_upload(
 
     let example_artifact_clone = example_artifact.clone();
     let output = tokio::task::spawn_blocking(move || {
-        Command::new("cargo")
+        Command::new("rustup")
             .arg("override")
             .arg("set")
             .arg(target_framework.rust_version())
