@@ -1,1 +1,1 @@
-let wire::private(row: 3, column: 2) = (wire::private(row: 1, column: 2) + virtual_wire(index: 3, value: 23u64)) * wire::private(row: 5, column: 6, value: 32u64);
+let wire::private(row: 3, column: 2) = (wire::private(row: 1, column: 2) + virtual_wire::public(index: 3, value: 23u64)) * wire::private(row: 5, column: 6, value: 32u64);

@@ -29,7 +29,8 @@
                       "index": 3,
                       "value": {
                         "U64": 23
-                      }
+                      },
+                      "wiretype": "Public"
                     }
                   }
                 }

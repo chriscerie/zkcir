@@ -1,1 +1,1 @@
-let num = (wire::public(row: 1, column: 2) + virtual_wire(index: 3)) * wire::private(row: 5, column: 6);
+let num = (wire::public(row: 1, column: 2) + virtual_wire::public(index: 3)) * wire::private(row: 5, column: 6);

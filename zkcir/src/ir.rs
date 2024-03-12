@@ -213,7 +213,7 @@ mod tests {
                     lhs: Box::new(Expression::BinaryOperator {
                         lhs: Box::new(Wire::new_private(1, 2).into()),
                         binop: BinOp::Add,
-                        rhs: Box::new(VirtualWire::new(3).into()),
+                        rhs: Box::new(VirtualWire::new_public(3).into()),
                     }),
                     binop: BinOp::Multiply,
                     rhs: Box::new(Wire::new_private(5, 6).into()),
@@ -249,7 +249,7 @@ mod tests {
                         lhs: Box::new(Expression::BinaryOperator {
                             lhs: Box::new(Wire::new_private(1, 2).into()),
                             binop: BinOp::Add,
-                            rhs: Box::new(VirtualWire::new(3).into()),
+                            rhs: Box::new(VirtualWire::new_public(3).into()),
                         }),
                         binop: BinOp::Multiply,
                         rhs: Box::new(Wire::new_private(5, 6).into()),
@@ -271,7 +271,7 @@ mod tests {
                         lhs: Box::new(Expression::BinaryOperator {
                             lhs: Box::new(Wire::new_public(1, 2).into()),
                             binop: BinOp::Add,
-                            rhs: Box::new(VirtualWire::new(3).into()),
+                            rhs: Box::new(VirtualWire::new_public(3).into()),
                         }),
                         binop: BinOp::Multiply,
                         rhs: Box::new(Wire::new_private(5, 6).into()),

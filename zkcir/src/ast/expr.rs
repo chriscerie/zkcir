@@ -221,12 +221,17 @@ impl Node for Value {
 pub struct VirtualWire {
     pub index: usize,
     pub value: Option<Value>,
+    pub wiretype: Wiretype,
 }
 
 impl VirtualWire {
     #[must_use]
-    pub fn new(index: usize) -> Self {
-        Self { index, value: None }
+    pub fn new_public(index: usize) -> Self {
+        Self {
+            index,
+            value: None,
+            wiretype: Wiretype::Public,
+        }
     }
 }
 
@@ -274,12 +279,13 @@ impl Node for VirtualWire {
     fn to_code_ir(&self) -> alloc::string::String {
         if let Some(value) = &self.value {
             format!(
-                "virtual_wire(index: {}, value: {})",
+                "virtual_wire::{}(index: {}, value: {})",
+                self.wiretype,
                 self.index,
                 value.to_code_ir()
             )
         } else {
-            format!("virtual_wire(index: {})", self.index)
+            format!("virtual_wire::{}(index: {})", self.wiretype, self.index)
         }
     }
 }
@@ -317,16 +323,6 @@ pub struct Wire {
 }
 
 impl Wire {
-    #[must_use]
-    pub fn new(row: usize, column: usize, wiretype: Wiretype) -> Wire {
-        Self {
-            row,
-            column,
-            value: None,
-            wiretype,
-        }
-    }
-
     #[must_use]
     pub fn new_constant(row: usize, column: usize) -> Wire {
         Self {
@@ -450,7 +446,7 @@ mod tests {
                         .into(),
                     ),
                     binop: BinOp::Add,
-                    rhs: Box::new(VirtualWire::new(3).into()),
+                    rhs: Box::new(VirtualWire::new_public(3).into()),
                 }),
                 binop: BinOp::Multiply,
                 rhs: Box::new(Wire::new_private(5, 6).into()),

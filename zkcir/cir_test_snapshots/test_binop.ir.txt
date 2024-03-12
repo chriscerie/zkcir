@@ -34,6 +34,7 @@ CirBuilder {
                                         23,
                                     ),
                                 ),
+                                wiretype: Public,
                             },
                         ),
                     ),
