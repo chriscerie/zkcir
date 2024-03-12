@@ -17,11 +17,11 @@ const AST = 'ast';
 const AST_TREE = 'ast_tree';
 
 // TODO: This is fragile. This should be replaced with a proper parser and lint through AST
-// verify!(public_input_1 < (2u64 ^ 6u64)); lints on public_input_1
+// `verify!(virtual_wire::public(index: 0, value: 42u64) < (2u64 ^ 6u64));` lints on virtual_wire::public(index: 0, value: 42u64)
 function findPublicInVerify(
   text: string,
 ): { start: IPosition; end: IPosition } | null {
-  const verifyRegex = /verify!\((public_input_\w+)/g;
+  const verifyRegex = /verify!\((\w+::public\([^)]+\))/g;
   const match = verifyRegex.exec(text);
   if (!match) {
     return null;
