@@ -75,7 +75,7 @@ export default function Home() {
                 >
                   universal
                 </Text>{' '}
-                platform for writing, compiling, and auditing ZK circuits
+                platform for developing, compiling, and auditing ZK circuits
               </h1>
 
               <Text className={classes.description} c="dimmed">
