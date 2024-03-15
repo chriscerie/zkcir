@@ -48,3 +48,5 @@ Internally fargate will compile the rust project with patched dependencies and s
 | `frontend`                           | User-facing web frontend                                           | Online compiler     |
 | `zkcir`                              | Rust library to construct AST of the IR                            | Library             |
 | `zkcir-cli`                          | CLI to compile circuits to IR locally                              | CLI                 |
+
+<img src="https://github.com/chriscerie/zkcir/assets/51393127/96196ea6-66b7-4767-b353-8b6050904a9b" width="50%" height="50%">
