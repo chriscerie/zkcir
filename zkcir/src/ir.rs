@@ -12,6 +12,7 @@ use crate::ast::Stmt;
 use crate::ast::Value;
 use crate::ast::VirtualWire;
 use crate::ast::Wire;
+use crate::ast::Wiretype;
 use crate::node::Node;
 use crate::END_DISCRIMINATOR;
 use crate::START_DISCRIMINATOR;
@@ -163,6 +164,21 @@ impl CirBuilder {
         }
 
         self
+    }
+
+    // TODO: self shouldn't be mut
+    pub fn has_wire_defined(&mut self, row: usize, column: usize, wire_type: Wiretype) -> bool {
+        self.stmts.iter_mut().any(|stmt| {
+            let mut has_wire = false;
+
+            stmt.visit_wires(&mut |wire| {
+                if wire.row == row && wire.column == column && wire.wiretype == wire_type {
+                    has_wire = true;
+                }
+            });
+
+            has_wire
+        })
     }
 
     #[must_use]
