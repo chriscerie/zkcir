@@ -221,7 +221,7 @@ fn start(current_dir: &Path, args: &Args, pb: &ProgressBar) -> Result<(), String
 
     let start_byte_json = output_str
         .find(START_DISCRIMINATOR)
-        .ok_or("Start discriminator of output not found")?
+        .ok_or("Start discriminator of output not found. Are the framework versions compatible with zkcir?")?
         + START_DISCRIMINATOR.len();
 
     let end_byte_json = output_str
